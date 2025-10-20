@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load dict_extras %}
+
+{% block title %}{{ course.title }} · Duolingo MVP{% endblock %}
+
+{% block content %}
+<h2>{{ course.title }}</h2>
+<p>{{ course.description }}</p>
+
+<h3>Lessons</h3>
+<ol>
+{% for ls in lessons %}
+  <li>
+    {{ ls.title }}
+    {% if user.is_authenticated %}
+      {% with lp=progress_map|get_item:ls.id %}
+        {% if lp and lp.completed %}
+          ✅
+        {% endif %}
+      {% endwith %}
+      — <a href="{% url 'lesson_start' ls.id %}">Start</a>
+    {% else %}
+      — <a href="/admin/login/?next={% url 'lesson_start' ls.id %}">Login to start</a>
+    {% endif %}
+  </li>
+{% empty %}
+  <li>No lessons.</li>
+{% endfor %}
+</ol>
+{% endblock %}

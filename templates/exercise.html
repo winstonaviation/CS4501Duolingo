@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ lesson.title }}</h2>
+<p>Exercise {{ index }} of {{ total }}</p>
+
+<form method="post">
+  {% csrf_token %}
+  <p><strong>Prompt:</strong> {{ exercise.prompt }}</p>
+
+  {% if exercise.type == "MC" %}
+    {% for choice in exercise.choices.all %}
+      <label style="display:block;margin-bottom:6px;">
+        <input type="radio" name="choice" value="{{ choice.id }}"> {{ choice.text }}
+      </label>
+    {% empty %}
+      <p><em>No choices configured.</em></p>
+    {% endfor %}
+  {% else %}
+    <input type="text" name="answer" placeholder="Type your translation…" style="width:100%;max-width:480px;">
+  {% endif %}
+
+  <div style="margin-top:12px;">
+    <button type="submit">Check</button>
+    {% if index > 1 %}
+      <a href="{% url 'exercise_play' lesson.id index|add:'-1' %}" style="margin-left:8px;">Back</a>
+    {% endif %}
+  </div>
+</form>
+
+{% if feedback %}
+  <hr>
+  {% if feedback.is_correct %}
+    <p style="color:green;"><strong>Correct!</strong></p>
+  {% else %}
+    <p style="color:#b00;"><strong>Not quite.</strong> Correct answer: {{ feedback.correct_answer }}</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

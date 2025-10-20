@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ lesson.title }} — Completed</h2>
+<p>Your score: <strong>{{ score }}</strong> / {{ total }}</p>
+<p><a href="{% url 'course_detail' lesson.course.slug %}">Back to course</a></p>
+{% endblock %}

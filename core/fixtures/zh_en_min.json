@@ -1,0 +1,33 @@
+[
+  {
+    "model": "core.course",
+    "pk": 1,
+    "fields": {
+      "title": "Chinese to English (Basics)",
+      "slug": "zh-en-basics",
+      "from_language": "Chinese",
+      "to_language": "English",
+      "description": "Greetings and simple phrases."
+    }
+  },
+  {
+    "model": "core.lesson",
+    "pk": 1,
+    "fields": { "course": 1, "title": "Greetings", "order": 1 }
+  },
+  { "model": "core.exercise", "pk": 1,
+    "fields": { "lesson": 1, "order": 1, "type": "TR", "prompt": "你好", "answer_text": "hello" }
+  },
+  { "model": "core.exercise", "pk": 2,
+    "fields": { "lesson": 1, "order": 2, "type": "MC", "prompt": "谢谢", "answer_text": "thank you" }
+  },
+  { "model": "core.exercisechoice", "pk": 1,
+    "fields": { "exercise": 2, "text": "goodbye", "is_correct": false }
+  },
+  { "model": "core.exercisechoice", "pk": 2,
+    "fields": { "exercise": 2, "text": "thank you", "is_correct": true }
+  },
+  { "model": "core.exercisechoice", "pk": 3,
+    "fields": { "exercise": 2, "text": "please", "is_correct": false }
+  }
+]
