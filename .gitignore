@@ -1,14 +1,7 @@
 /venv
-# Database
 db.sqlite3
-
-# Python
-__pycache__/
 *.pyc
-
-# Virtual environment
-venv/
-env/
+__pycache__/
 .env
 AUTH_README.md
 AUTHENTICATION_SUMMARY.md

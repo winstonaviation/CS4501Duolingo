@@ -14,6 +14,11 @@
             <a href="{% url 'home' %}" class="logo">🦉 Duolingo</a>
             <nav>
                 {% if user.is_authenticated %}
+                    {% if user.profile.has_selected_language %}
+                        <span class="language-flag-badge" title="Learning {{ user.profile.get_learning_language_display }}">
+                            {% if user.profile.learning_language == 'es' %}🇪🇸{% elif user.profile.learning_language == 'zh' %}🇨🇳{% endif %}
+                        </span>
+                    {% endif %}
                     <a href="{% url 'course_list' %}">Courses</a>
                     <span class="user-info">Hi, {{ user.email|default:user.username }}!</span>
                     <form action="{% url 'account_logout' %}" method="post" style="display: inline;">

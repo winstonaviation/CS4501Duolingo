@@ -2,15 +2,25 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.db.models import Count
-from .models import Course, Lesson, Exercise, ExerciseChoice, Attempt, LessonProgress
+from datetime import date
+from .models import (
+    Course, Section, Unit, Lesson, Exercise, ExerciseChoice,
+    Attempt, LessonProgress, UserProfile, DailyQuest,
+    UserDailyQuest, Achievement, UserAchievement
+)
 
 def home(request):
     # Show onboarding page for non-logged-in users
     if not request.user.is_authenticated:
         return render(request, "onboarding.html")
 
+    # Check if user has selected a language, if not redirect to language selection
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    if not profile.has_selected_language:
+        return redirect("language_selection")
+
     # Show courses for logged-in users
-    top_courses = Course.objects.annotate(n_lessons=Count("lessons")).order_by("-n_lessons")[:6]
+    top_courses = Course.objects.annotate(n_lessons=Count("sections__units__lessons")).order_by("-n_lessons")[:6]
     return render(request, "home.html", {"courses": top_courses})
 
 def course_list(request):
@@ -19,12 +29,28 @@ def course_list(request):
 
 def course_detail(request, slug):
     course = get_object_or_404(Course, slug=slug)
-    lessons = course.lessons.all().order_by("order")
+    sections = course.sections.all().prefetch_related("units__lessons")
+
     # attach progress if logged in
     progress_map = {}
     if request.user.is_authenticated:
-        progress_map = {lp.lesson_id: lp for lp in LessonProgress.objects.filter(user=request.user, lesson__course=course)}
-    return render(request, "course_detail.html", {"course": course, "lessons": lessons, "progress_map": progress_map})
+        profile = request.user.profile
+        all_lessons = Lesson.objects.filter(unit__section__course=course)
+        progress_map = {lp.lesson_id: lp for lp in LessonProgress.objects.filter(user=request.user, lesson__in=all_lessons)}
+
+        # Get daily quests
+        today = date.today()
+        daily_quests = UserDailyQuest.objects.filter(user=request.user, date_assigned=today)
+
+        return render(request, "course_detail.html", {
+            "course": course,
+            "sections": sections,
+            "progress_map": progress_map,
+            "profile": profile,
+            "daily_quests": daily_quests,
+        })
+
+    return render(request, "course_detail.html", {"course": course, "sections": sections, "progress_map": progress_map})
 
 @login_required
 def lesson_start(request, lesson_id):
@@ -39,6 +65,12 @@ def lesson_start(request, lesson_id):
 def exercise_play(request, lesson_id, index: int):
     lesson = get_object_or_404(Lesson, pk=lesson_id)
     exercises = list(lesson.exercises.all().order_by("order"))
+    profile = request.user.profile
+
+    # Check if user has hearts
+    if profile.hearts <= 0:
+        return render(request, "no_hearts.html", {"profile": profile})
+
     if not exercises:
         return redirect("lesson_complete", lesson_id=lesson.id)
     # clamp index
@@ -48,6 +80,7 @@ def exercise_play(request, lesson_id, index: int):
 
     exercise = exercises[index-1]
     feedback = None
+
     if request.method == "POST":
         is_correct = False
         selected_choice = None
@@ -69,6 +102,16 @@ def exercise_play(request, lesson_id, index: int):
             selected_choice=selected_choice,
             is_correct=is_correct,
         )
+
+        # Update hearts and XP
+        if not is_correct:
+            profile.lose_heart()
+        else:
+            profile.add_xp(10)  # Award 10 XP for correct answer
+
+        # Update streak
+        profile.update_streak()
+
         # Small inline feedback
         feedback = {
             "is_correct": is_correct,
@@ -84,12 +127,15 @@ def exercise_play(request, lesson_id, index: int):
         "index": index,
         "total": len(exercises),
         "feedback": feedback,
+        "profile": profile,
     })
 
 @login_required
 def lesson_complete(request, lesson_id):
     lesson = get_object_or_404(Lesson, pk=lesson_id)
     exercises = list(lesson.exercises.all())
+    profile = request.user.profile
+
     # compute score = correct attempts on these exercises (latest per exercise)
     latest = (
         Attempt.objects
@@ -108,4 +154,57 @@ def lesson_complete(request, lesson_id):
     lp.last_seen = timezone.now()
     lp.save()
 
-    return render(request, "lesson_complete.html", {"lesson": lesson, "score": score, "total": len(exercises)})
+    # Award completion bonus XP
+    completion_xp = 20
+    profile.add_xp(completion_xp)
+
+    # Update daily quest progress for completing lessons
+    today = date.today()
+    lesson_quest = UserDailyQuest.objects.filter(
+        user=request.user,
+        quest__quest_type=DailyQuest.COMPLETE_LESSONS,
+        date_assigned=today
+    ).first()
+    if lesson_quest:
+        lesson_quest.update_progress(1)
+
+    # Check for perfect lesson (all correct)
+    if score == len(exercises):
+        perfect_quest = UserDailyQuest.objects.filter(
+            user=request.user,
+            quest__quest_type=DailyQuest.PERFECT_LESSON,
+            date_assigned=today
+        ).first()
+        if perfect_quest:
+            perfect_quest.update_progress(1)
+
+    return render(request, "lesson_complete.html", {
+        "lesson": lesson,
+        "score": score,
+        "total": len(exercises),
+        "profile": profile,
+        "completion_xp": completion_xp,
+    })
+
+@login_required
+def language_selection(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    # If user has already selected a language, redirect to home
+    if profile.has_selected_language:
+        return redirect("home")
+
+    if request.method == "POST":
+        language = request.POST.get("language")
+        if language in dict(UserProfile.LANGUAGE_CHOICES):
+            profile.learning_language = language
+            profile.has_selected_language = True
+            profile.save()
+            return redirect("home")
+
+    languages = [
+        {"code": UserProfile.SPANISH, "name": "Spanish", "flag": "🇪🇸", "native_name": "Español"},
+        {"code": UserProfile.CHINESE, "name": "Chinese", "flag": "🇨🇳", "native_name": "中文"},
+    ]
+
+    return render(request, "language_selection.html", {"languages": languages})
