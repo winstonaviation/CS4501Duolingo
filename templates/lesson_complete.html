@@ -1,6 +1,46 @@
 {% extends "base.html" %}
+{% block title %}Lesson Complete! · Duolingo{% endblock %}
 {% block content %}
-<h2>{{ lesson.title }} — Completed</h2>
-<p>Your score: <strong>{{ score }}</strong> / {{ total }}</p>
-<p><a href="{% url 'course_detail' lesson.course.slug %}">Back to course</a></p>
+<div class="completion-container">
+  <div class="completion-icon">🎉</div>
+
+  <h2 style="font-size: 48px; margin-bottom: 16px;">Lesson Complete!</h2>
+  <p style="font-size: 20px; color: #777;">
+    Great job on completing <strong>{{ lesson.title }}</strong>!
+  </p>
+
+  <div class="score-display">
+    <div style="color: #777; font-size: 18px; margin-bottom: 8px;">Your Score</div>
+    <div class="score">{{ score }}/{{ total }}</div>
+    <div class="total">
+      {% widthratio score total 100 %}% Correct
+    </div>
+
+    {% if score == total %}
+      <div style="margin-top: 24px; padding: 16px; background: #d7ffb8; border-radius: 12px; color: var(--duo-green-dark); font-weight: 700;">
+        ⭐ Perfect Score! Outstanding work!
+      </div>
+    {% elif score >= total|floatformat:0|add:"-1" %}
+      <div style="margin-top: 24px; padding: 16px; background: #fff3cd; border-radius: 12px; color: #856404; font-weight: 700;">
+        🌟 Almost perfect! Excellent effort!
+      </div>
+    {% endif %}
+  </div>
+
+  <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+    <a href="{% url 'lesson_start' lesson.id %}" class="btn btn-secondary">
+      Practice Again
+    </a>
+    <a href="{% url 'course_detail' lesson.course.slug %}" class="btn">
+      Continue Learning
+    </a>
+  </div>
+
+  <div style="margin-top: 48px; padding: 24px; background: white; border-radius: 16px; box-shadow: var(--shadow);">
+    <h4 style="margin-bottom: 16px;">Keep Your Streak Going!</h4>
+    <p style="color: #777;">
+      Come back tomorrow to continue your learning journey and maintain your progress.
+    </p>
+  </div>
+</div>
 {% endblock %}

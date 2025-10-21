@@ -1,38 +1,89 @@
 {% extends "base.html" %}
+{% block title %}{{ lesson.title }} - Exercise {{ index }} · Duolingo{% endblock %}
 {% block content %}
-<h2>{{ lesson.title }}</h2>
-<p>Exercise {{ index }} of {{ total }}</p>
-
-<form method="post">
-  {% csrf_token %}
-  <p><strong>Prompt:</strong> {{ exercise.prompt }}</p>
-
-  {% if exercise.type == "MC" %}
-    {% for choice in exercise.choices.all %}
-      <label style="display:block;margin-bottom:6px;">
-        <input type="radio" name="choice" value="{{ choice.id }}"> {{ choice.text }}
-      </label>
-    {% empty %}
-      <p><em>No choices configured.</em></p>
-    {% endfor %}
-  {% else %}
-    <input type="text" name="answer" placeholder="Type your translation…" style="width:100%;max-width:480px;">
-  {% endif %}
-
-  <div style="margin-top:12px;">
-    <button type="submit">Check</button>
-    {% if index > 1 %}
-      <a href="{% url 'exercise_play' lesson.id index|add:'-1' %}" style="margin-left:8px;">Back</a>
-    {% endif %}
+<div class="exercise-container">
+  <!-- Progress Bar -->
+  <div class="progress-bar">
+    <div class="progress-fill" style="width: {% widthratio index total 100 %}%;"></div>
   </div>
-</form>
 
-{% if feedback %}
-  <hr>
-  {% if feedback.is_correct %}
-    <p style="color:green;"><strong>Correct!</strong></p>
-  {% else %}
-    <p style="color:#b00;"><strong>Not quite.</strong> Correct answer: {{ feedback.correct_answer }}</p>
+  <!-- Exercise Prompt -->
+  <div class="exercise-prompt">
+    <h3>
+      {% if exercise.type == "MC" %}
+        Choose the correct translation
+      {% else %}
+        Translate this sentence
+      {% endif %}
+    </h3>
+    <div class="question">{{ exercise.prompt }}</div>
+  </div>
+
+  <!-- Feedback (shown after submission) -->
+  {% if feedback %}
+    <div class="feedback {% if feedback.is_correct %}correct{% else %}incorrect{% endif %}">
+      <span class="feedback-icon">
+        {% if feedback.is_correct %}✓{% else %}✗{% endif %}
+      </span>
+      <div>
+        {% if feedback.is_correct %}
+          <strong>Excellent!</strong> You got it right!
+        {% else %}
+          <strong>Not quite.</strong> Correct answer: <em>{{ feedback.correct_answer }}</em>
+        {% endif %}
+      </div>
+    </div>
   {% endif %}
-{% endif %}
+
+  <!-- Exercise Form -->
+  <form method="post">
+    {% csrf_token %}
+
+    {% if exercise.type == "MC" %}
+      <!-- Multiple Choice -->
+      <div class="exercise-choices">
+        {% for choice in exercise.choices.all %}
+          <label class="choice-btn">
+            <input type="radio" name="choice" value="{{ choice.id }}" required>
+            {{ choice.text }}
+          </label>
+        {% empty %}
+          <p style="text-align: center; color: #777;">
+            <em>No choices configured for this exercise.</em>
+          </p>
+        {% endfor %}
+      </div>
+    {% else %}
+      <!-- Translation Input -->
+      <input
+        type="text"
+        name="answer"
+        class="answer-input"
+        placeholder="Type your translation here..."
+        required
+        autofocus
+      >
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      {% if index > 1 %}
+        <a href="{% url 'exercise_play' lesson.id index|add:'-1' %}" class="btn-gray btn">
+          ← Back
+        </a>
+      {% else %}
+        <div></div>
+      {% endif %}
+
+      <button type="submit" class="btn">
+        Check Answer
+      </button>
+    </div>
+  </form>
+
+  <!-- Progress indicator -->
+  <div style="text-align: center; margin-top: 32px; color: #777; font-size: 14px;">
+    Question {{ index }} of {{ total }}
+  </div>
+</div>
 {% endblock %}

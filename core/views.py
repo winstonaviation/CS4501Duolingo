@@ -5,6 +5,11 @@ from django.db.models import Count
 from .models import Course, Lesson, Exercise, ExerciseChoice, Attempt, LessonProgress
 
 def home(request):
+    # Show onboarding page for non-logged-in users
+    if not request.user.is_authenticated:
+        return render(request, "onboarding.html")
+
+    # Show courses for logged-in users
     top_courses = Course.objects.annotate(n_lessons=Count("lessons")).order_by("-n_lessons")[:6]
     return render(request, "home.html", {"courses": top_courses})
 

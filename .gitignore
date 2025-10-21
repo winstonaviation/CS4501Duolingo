@@ -1,4 +1,16 @@
 /venv
+# Database
 db.sqlite3
-*.pyc
+
+# Python
 __pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+env/
+.env
+AUTH_README.md
+AUTHENTICATION_SUMMARY.md
+GOOGLE_OAUTH_SETUP.md
+QUICKSTART.md

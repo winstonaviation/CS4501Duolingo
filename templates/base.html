@@ -1,26 +1,33 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>{% block title %}Duolingo MVP{% endblock %}</title>
-    {% load static %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Duolingo{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'style.css' %}">
-  </head>
-  <body>
-    <header>
-      <h1><a href="{% url 'home' %}">Duolingo MVP</a></h1>
-      <nav>
-        <a href="{% url 'course_list' %}">Courses</a>
-        {% if user.is_authenticated %}
-          <span>Hi, {{ user.username }}!</span>
-          <a href="/admin/logout/">Logout</a>
-        {% else %}
-          <a href="/admin/login/?next=/">Login</a>
-        {% endif %}
-      </nav>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Ctext%20y%3D%22.9em%22%20font-size%3D%2290%22%3E%F0%9F%A6%89%3C%2Ftext%3E%3C%2Fsvg%3E">
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <a href="{% url 'home' %}" class="logo">🦉 Duolingo</a>
+            <nav>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'course_list' %}">Courses</a>
+                    <span class="user-info">Hi, {{ user.email|default:user.username }}!</span>
+                    <form action="{% url 'account_logout' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary">LOGOUT</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'account_login' %}" class="btn btn-secondary">I ALREADY HAVE AN ACCOUNT</a>
+                {% endif %}
+            </nav>
+        </div>
     </header>
     <main>
-      {% block content %}{% endblock %}
+        {% block content %}{% endblock %}
     </main>
-  </body>
+</body>
 </html>
