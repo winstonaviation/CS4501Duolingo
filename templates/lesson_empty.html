@@ -1,5 +1,26 @@
 {% extends "base.html" %}
+{% block title %}{{ lesson.title }} · Duolingo{% endblock %}
 {% block content %}
-<h2>{{ lesson.title }}</h2>
-<p>This lesson has no exercises yet.</p>
+<div style="max-width: 600px; margin: 80px auto; text-align: center; padding: 40px;">
+  <div style="font-size: 80px; margin-bottom: 24px;">📝</div>
+  <h2>{{ lesson.title }}</h2>
+  <p style="font-size: 18px; color: #777; margin: 24px 0;">
+    This lesson doesn't have any exercises yet.
+  </p>
+  {% if user.is_staff %}
+    <div style="margin-top: 32px; padding: 24px; background: #f0f9ff; border-radius: 12px;">
+      <p style="margin-bottom: 16px; color: #555;">
+        You're an admin! Add exercises to this lesson to get started.
+      </p>
+      <a href="/admin/core/exercise/add/?lesson={{ lesson.id }}" class="btn">
+        Add Exercises
+      </a>
+    </div>
+  {% endif %}
+  <div style="margin-top: 32px;">
+    <a href="{% url 'course_detail' lesson.course.slug %}" class="btn-gray btn">
+      Back to Course
+    </a>
+  </div>
+</div>
 {% endblock %}

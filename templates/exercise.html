@@ -1,38 +1,269 @@
 {% extends "base.html" %}
+{% block title %}{{ lesson.title }} - Exercise {{ index }} · Duolingo{% endblock %}
 {% block content %}
-<h2>{{ lesson.title }}</h2>
-<p>Exercise {{ index }} of {{ total }}</p>
-
-<form method="post">
-  {% csrf_token %}
-  <p><strong>Prompt:</strong> {{ exercise.prompt }}</p>
-
-  {% if exercise.type == "MC" %}
-    {% for choice in exercise.choices.all %}
-      <label style="display:block;margin-bottom:6px;">
-        <input type="radio" name="choice" value="{{ choice.id }}"> {{ choice.text }}
-      </label>
-    {% empty %}
-      <p><em>No choices configured.</em></p>
-    {% endfor %}
-  {% else %}
-    <input type="text" name="answer" placeholder="Type your translation…" style="width:100%;max-width:480px;">
-  {% endif %}
-
-  <div style="margin-top:12px;">
-    <button type="submit">Check</button>
-    {% if index > 1 %}
-      <a href="{% url 'exercise_play' lesson.id index|add:'-1' %}" style="margin-left:8px;">Back</a>
+<div class="exercise-container">
+  <!-- Progress Bar and Hearts -->
+  <div style="position: relative; margin-bottom: 40px;">
+    <div class="progress-bar">
+      <div class="progress-fill" style="width: {% widthratio index total 100 %}%;"></div>
+    </div>
+    
+    {% if profile %}
+      <div class="hearts-display">
+        {% for i in "12345"|slice:":"|make_list %}
+          {% if forloop.counter <= profile.hearts %}
+            ❤️
+          {% else %}
+            🤍
+          {% endif %}
+        {% endfor %}
+      </div>
     {% endif %}
   </div>
-</form>
 
-{% if feedback %}
-  <hr>
-  {% if feedback.is_correct %}
-    <p style="color:green;"><strong>Correct!</strong></p>
-  {% else %}
-    <p style="color:#b00;"><strong>Not quite.</strong> Correct answer: {{ feedback.correct_answer }}</p>
+  <!-- Exercise Prompt -->
+  <div class="exercise-prompt">
+    {% if exercise.is_new_word %}
+      <div class="new-word-badge">
+        <span>✨</span>
+        <span>NEW WORD</span>
+      </div>
+    {% endif %}
+
+    <h3>
+      {% if exercise.type == "MC" %}
+        {% if exercise.choices.first.image %}
+          Which one of these is "{{ exercise.prompt }}"?
+        {% else %}
+          Choose the correct translation
+        {% endif %}
+      {% elif exercise.type == "TR" %}
+        Write this in English
+      {% elif exercise.type == "LS" %}
+        What do you hear?
+      {% elif exercise.type == "SP" %}
+        Say this sentence
+      {% else %}
+        Translate this sentence
+      {% endif %}
+    </h3>
+
+    {% if exercise.type != "MC" or not exercise.choices.first.image %}
+      <div class="question">
+        {{ exercise.prompt }}
+        {% if exercise.audio_file %}
+          <button onclick="playAudio()" style="background: none; border: none; cursor: pointer; font-size: 32px; margin-left: 16px;">
+            🔊
+          </button>
+          <audio id="exercise-audio" src="{{ exercise.audio_file.url }}"></audio>
+          <script>
+            function playAudio() {
+              document.getElementById('exercise-audio').play();
+            }
+          </script>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Feedback (shown after submission) -->
+  {% if feedback %}
+    <div class="feedback {% if feedback.is_correct %}correct{% else %}incorrect{% endif %}">
+      <span class="feedback-icon">
+        {% if feedback.is_correct %}✓{% else %}✗{% endif %}
+      </span>
+      <div>
+        {% if feedback.is_correct %}
+          <strong>Excellent!</strong> You got it right!
+        {% else %}
+          <strong>Not quite.</strong> Correct answer: <em>{{ feedback.correct_answer }}</em>
+        {% endif %}
+      </div>
+    </div>
   {% endif %}
-{% endif %}
+
+  <!-- Exercise Form -->
+  <form method="post">
+    {% csrf_token %}
+
+    {% if exercise.type == "MC" %}
+      <!-- Multiple Choice -->
+      {% if exercise.choices.first.image %}
+        <!-- Visual Multiple Choice (with images) -->
+        <div class="visual-choices">
+          {% for choice in exercise.choices.all %}
+            <label class="visual-choice-card">
+              <input type="radio" name="choice" value="{{ choice.id }}" required>
+              <div class="choice-image-container">
+                <img src="{{ choice.image.url }}" alt="{{ choice.text }}" style="width: 100%; height: 100%; object-fit: contain;">
+              </div>
+              <div class="choice-text">{{ choice.text }}</div>
+              <div class="choice-number">{{ forloop.counter }}</div>
+            </label>
+          {% empty %}
+            <p style="text-align: center; color: #777;">
+              <em>No choices configured for this exercise.</em>
+            </p>
+          {% endfor %}
+        </div>
+      {% else %}
+        <!-- Text Multiple Choice -->
+        <div class="exercise-choices">
+          {% for choice in exercise.choices.all %}
+            <label class="choice-btn">
+              <input type="radio" name="choice" value="{{ choice.id }}" required>
+              <div class="choice-content">
+                {% if choice.text|length <= 3 %}
+                  <!-- Emoji or short character -->
+                  <div class="choice-image">{{ choice.text }}</div>
+                {% endif %}
+                
+                <div class="choice-text">{{ choice.text }}</div>
+                
+                {% if choice.audio_file %}
+                  <button type="button" onclick="playChoiceAudio{{ forloop.counter }}()" 
+                          style="background: none; border: none; cursor: pointer; font-size: 24px; margin-top: 8px;">
+                    🔊
+                  </button>
+                  <audio id="choice-audio-{{ forloop.counter }}" src="{{ choice.audio_file.url }}"></audio>
+                  <script>
+                    function playChoiceAudio{{ forloop.counter }}() {
+                      document.getElementById('choice-audio-{{ forloop.counter }}').play();
+                    }
+                  </script>
+                {% endif %}
+                
+                <div class="choice-number">{{ forloop.counter }}</div>
+              </div>
+            </label>
+          {% empty %}
+            <p style="text-align: center; color: #777; grid-column: 1/-1;">
+              <em>No choices configured for this exercise.</em>
+            </p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% elif exercise.type == "LS" %}
+      <!-- Listen Exercise -->
+      <div style="text-align: center; margin-bottom: 32px;">
+        <button type="button" onclick="playAudio()" class="btn" style="font-size: 48px; padding: 32px;">
+          🔊
+        </button>
+        {% if exercise.audio_file %}
+          <audio id="exercise-audio" src="{{ exercise.audio_file.url }}"></audio>
+          <script>
+            function playAudio() {
+              document.getElementById('exercise-audio').play();
+            }
+            // Auto-play on load
+            window.addEventListener('load', function() {
+              document.getElementById('exercise-audio').play();
+            });
+          </script>
+        {% endif %}
+      </div>
+      <input
+        type="text"
+        name="answer"
+        class="answer-input"
+        placeholder="Type what you hear..."
+        required
+        autofocus
+      >
+    {% else %}
+      <!-- Translation Input -->
+      <input
+        type="text"
+        name="answer"
+        class="answer-input"
+        placeholder="Type your translation here..."
+        required
+        autofocus
+      >
+    {% endif %}
+
+    <!-- Hint -->
+    {% if exercise.hint and not feedback %}
+      <div style="text-align: center; margin-bottom: 24px;">
+        <details style="cursor: pointer;">
+          <summary style="color: var(--duo-blue); font-weight: 700; font-size: 14px; text-transform: uppercase;">
+            💡 Show Hint
+          </summary>
+          <p style="margin-top: 12px; color: var(--duo-text-light); padding: 16px; background: #f0f9ff; border-radius: 12px;">
+            {{ exercise.hint }}
+          </p>
+        </details>
+      </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+      <button type="button" onclick="window.location.href='{% url 'course_detail' lesson.unit.section.course.slug %}'" 
+              class="btn-gray btn">
+        ✕ Exit
+      </button>
+
+      <div style="display: flex; gap: 12px;">
+        {% if exercise.type == "MC" and not feedback %}
+          <button type="button" onclick="skip()" class="btn-gray btn">
+            Skip
+          </button>
+          <script>
+            function skip() {
+              if (confirm('Are you sure you want to skip this question?')) {
+                window.location.href = '{% url 'exercise_play' lesson.id index|add:'1' %}';
+              }
+            }
+          </script>
+        {% endif %}
+
+        <button type="submit" class="btn">
+          {% if feedback %}
+            {% if feedback.is_correct %}
+              Continue →
+            {% else %}
+              Got it
+            {% endif %}
+          {% else %}
+            Check
+          {% endif %}
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- Progress indicator -->
+  <div style="text-align: center; margin-top: 32px; color: #777; font-size: 14px; font-weight: 600;">
+    Question {{ index }} of {{ total }}
+  </div>
+
+  <!-- Keyboard shortcuts hint -->
+  <div style="text-align: center; margin-top: 16px; color: var(--duo-text-light); font-size: 12px;">
+    Press <kbd style="background: var(--duo-gray); padding: 2px 8px; border-radius: 4px;">Enter</kbd> to submit
+    {% if exercise.type == "MC" %}
+      • Press <kbd style="background: var(--duo-gray); padding: 2px 8px; border-radius: 4px;">1</kbd>-<kbd style="background: var(--duo-gray); padding: 2px 8px; border-radius: 4px;">{{ exercise.choices.count }}</kbd> to select
+    {% endif %}
+  </div>
+</div>
+
+<!-- Keyboard shortcuts -->
+<script>
+  document.addEventListener('keydown', function(e) {
+    // Enter to submit
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+      document.querySelector('form').submit();
+    }
+    
+    // Number keys for multiple choice
+    {% if exercise.type == "MC" %}
+    const num = parseInt(e.key);
+    if (num >= 1 && num <= {{ exercise.choices.count }}) {
+      const choices = document.querySelectorAll('input[name="choice"]');
+      if (choices[num - 1]) {
+        choices[num - 1].checked = true;
+      }
+    }
+    {% endif %}
+  });
+</script>
 {% endblock %}

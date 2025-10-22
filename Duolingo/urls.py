@@ -16,7 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from allauth.account.views import LogoutView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Override the admin's logout to use allauth's logout view
+    path('admin/logout/', LogoutView.as_view(), name='admin_logout'),
+    path('accounts/', include('allauth.urls')),
     path("", include("core.urls")),
 ]

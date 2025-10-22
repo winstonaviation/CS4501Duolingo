@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Quests · Duolingo{% endblock %}
+
+{% block content %}
+<style>
+    .quests-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr 380px;
+        gap: 24px;
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 24px;
+        min-height: calc(100vh - 80px);
+    }
+
+    .quests-main {
+        max-width: 800px;
+    }
+
+    .quests-header {
+        margin-bottom: 40px;
+    }
+
+    .quests-hero {
+        background: linear-gradient(135deg, #58cc02 0%, #45a302 100%);
+        border-radius: 20px;
+        padding: 48px 40px;
+        color: white;
+        text-align: center;
+        margin-bottom: 40px;
+        box-shadow: 0 8px 24px rgba(88, 204, 2, 0.3);
+    }
+
+    .quests-hero-icon {
+        font-size: 80px;
+        margin-bottom: 16px;
+    }
+
+    .quests-hero h1 {
+        font-size: 40px;
+        font-weight: 900;
+        margin-bottom: 12px;
+    }
+
+    .quests-hero p {
+        font-size: 18px;
+        opacity: 0.95;
+    }
+
+    .quests-section {
+        margin-bottom: 40px;
+    }
+
+    .quests-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .quests-section h2 {
+        font-size: 28px;
+        font-weight: 900;
+        color: var(--duo-text);
+    }
+
+    .refresh-timer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--duo-text-light);
+        font-weight: 600;
+    }
+
+    .refresh-timer-icon {
+        font-size: 20px;
+    }
+
+    .quest-card {
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 16px;
+        transition: all 0.2s;
+    }
+
+    .quest-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .quest-card.completed {
+        background: #f0fdf4;
+        border-color: var(--duo-green);
+    }
+
+    .quest-card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .quest-icon {
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, #ffd900 0%, #ffb800 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        flex-shrink: 0;
+        box-shadow: 0 4px 0 #d99f00;
+    }
+
+    .quest-card.completed .quest-icon {
+        background: linear-gradient(135deg, #58cc02 0%, #45a302 100%);
+        box-shadow: 0 4px 0 #3a8802;
+    }
+
+    .quest-info {
+        flex: 1;
+    }
+
+    .quest-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: var(--duo-text);
+        margin-bottom: 4px;
+    }
+
+    .quest-description {
+        font-size: 14px;
+        color: var(--duo-text-light);
+        line-height: 1.5;
+    }
+
+    .quest-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--duo-green);
+        margin-top: 8px;
+    }
+
+    .quest-card.completed .quest-status {
+        color: var(--duo-green);
+    }
+
+    .quest-progress {
+        margin-bottom: 16px;
+    }
+
+    .quest-progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .quest-progress-text {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--duo-text);
+    }
+
+    .quest-progress-percentage {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--duo-text-light);
+    }
+
+    .quest-progress-bar {
+        width: 100%;
+        height: 12px;
+        background: #f0f0f0;
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .quest-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ffd900 0%, #ffb800 100%);
+        border-radius: 6px;
+        transition: width 0.3s ease;
+    }
+
+    .quest-card.completed .quest-progress-fill {
+        background: linear-gradient(90deg, #58cc02 0%, #45a302 100%);
+    }
+
+    .quest-reward {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: #fff9e6;
+        border-radius: 12px;
+    }
+
+    .quest-card.completed .quest-reward {
+        background: #f0fdf4;
+    }
+
+    .reward-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--duo-text);
+    }
+
+    .reward-icon {
+        font-size: 24px;
+    }
+
+    .completed-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: var(--duo-green);
+        color: white;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        margin-left: auto;
+    }
+
+    .quests-empty {
+        text-align: center;
+        padding: 60px 24px;
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 16px;
+    }
+
+    .quests-empty-icon {
+        font-size: 80px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .quests-empty h3 {
+        font-size: 24px;
+        font-weight: 900;
+        color: var(--duo-text);
+        margin-bottom: 12px;
+    }
+
+    .quests-empty p {
+        font-size: 16px;
+        color: var(--duo-text-light);
+        line-height: 1.6;
+    }
+
+    .quest-locked {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .quest-locked-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: #f0f0f0;
+        color: var(--duo-text-light);
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        margin-left: auto;
+    }
+
+    @media (max-width: 1200px) {
+        .quests-layout {
+            grid-template-columns: 1fr 380px;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .quests-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="quests-layout">
+    <!-- Left Sidebar -->
+    <aside class="left-sidebar">
+        <nav class="sidebar-nav">
+            <a href="{% url 'home' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🏠</span>
+                <span>LEARN</span>
+            </a>
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🏆</span>
+                <span>LEADERBOARDS</span>
+            </a>
+            <a href="{% url 'quests' %}" class="sidebar-nav-item active">
+                <span class="sidebar-nav-icon">🎯</span>
+                <span>QUESTS</span>
+            </a>
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🛍️</span>
+                <span>SHOP</span>
+            </a>
+            <a href="{% url 'user_profile' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">👤</span>
+                <span>PROFILE</span>
+            </a>
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">⋯</span>
+                <span>MORE</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="quests-main">
+        <div class="quests-header">
+            <div class="quests-hero">
+                <div class="quests-hero-icon">🎯</div>
+                <h1>Daily Quests</h1>
+                <p>Complete quests to earn rewards! Quests refresh every day.</p>
+            </div>
+        </div>
+
+        <!-- Daily Quests Section -->
+        <div class="quests-section">
+            <div class="quests-section-header">
+                <h2>Today's Quests</h2>
+                <div class="refresh-timer">
+                    <span class="refresh-timer-icon">⏰</span>
+                    <span>Refreshes in {{ hours_remaining }}h {{ minutes_remaining }}m</span>
+                </div>
+            </div>
+
+            {% if daily_quests %}
+                {% for user_quest in daily_quests %}
+                    <div class="quest-card {% if user_quest.completed %}completed{% endif %}">
+                        <div class="quest-card-header">
+                            <div class="quest-icon">
+                                {% if user_quest.quest.quest_type == 'earn_xp' %}⚡
+                                {% elif user_quest.quest.quest_type == 'complete_lessons' %}📚
+                                {% elif user_quest.quest.quest_type == 'perfect_lesson' %}⭐
+                                {% elif user_quest.quest.quest_type == 'use_no_hearts' %}❤️
+                                {% else %}🎯
+                                {% endif %}
+                            </div>
+                            <div class="quest-info">
+                                <h3 class="quest-title">{{ user_quest.quest.title }}</h3>
+                                <p class="quest-description">{{ user_quest.quest.description }}</p>
+                                {% if user_quest.completed %}
+                                    <div class="quest-status">
+                                        <span>✓</span>
+                                        <span>Completed!</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% if user_quest.completed %}
+                                <div class="completed-badge">
+                                    <span>✓</span>
+                                    <span>COMPLETE</span>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="quest-progress">
+                            <div class="quest-progress-header">
+                                <span class="quest-progress-text">
+                                    {{ user_quest.progress }} / {{ user_quest.quest.target_value }}
+                                </span>
+                                <span class="quest-progress-percentage">
+                                    {% widthratio user_quest.progress user_quest.quest.target_value 100 %}%
+                                </span>
+                            </div>
+                            <div class="quest-progress-bar">
+                                <div class="quest-progress-fill" 
+                                     style="width: {% if user_quest.progress >= user_quest.quest.target_value %}100{% else %}{% widthratio user_quest.progress user_quest.quest.target_value 100 %}{% endif %}%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="quest-reward">
+                            {% if user_quest.quest.xp_reward > 0 %}
+                                <div class="reward-item">
+                                    <span class="reward-icon">⭐</span>
+                                    <span>{{ user_quest.quest.xp_reward }} XP</span>
+                                </div>
+                            {% endif %}
+                            {% if user_quest.quest.gem_reward > 0 %}
+                                <div class="reward-item">
+                                    <span class="reward-icon">💎</span>
+                                    <span>{{ user_quest.quest.gem_reward }} Gems</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="quests-empty">
+                    <div class="quests-empty-icon">🎯</div>
+                    <h3>No Quests Available</h3>
+                    <p>Check back tomorrow for new daily quests!</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Coming Soon Section -->
+        <div class="quests-section">
+            <div class="quests-section-header">
+                <h2>Weekly Challenges</h2>
+                <div class="quest-locked-badge">
+                    <span>🔒</span>
+                    <span>COMING SOON</span>
+                </div>
+            </div>
+
+            <div class="quest-card quest-locked">
+                <div class="quest-card-header">
+                    <div class="quest-icon">🏆</div>
+                    <div class="quest-info">
+                        <h3 class="quest-title">Weekly Warrior</h3>
+                        <p class="quest-description">Complete 7 perfect lessons this week</p>
+                    </div>
+                </div>
+                <div class="quest-progress">
+                    <div class="quest-progress-bar">
+                        <div class="quest-progress-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="quest-reward">
+                    <div class="reward-item">
+                        <span class="reward-icon">⭐</span>
+                        <span>100 XP</span>
+                    </div>
+                    <div class="reward-item">
+                        <span class="reward-icon">💎</span>
+                        <span>50 Gems</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quest-card quest-locked">
+                <div class="quest-card-header">
+                    <div class="quest-icon">🔥</div>
+                    <div class="quest-info">
+                        <h3 class="quest-title">Streak Master</h3>
+                        <p class="quest-description">Maintain a 7-day streak</p>
+                    </div>
+                </div>
+                <div class="quest-progress">
+                    <div class="quest-progress-bar">
+                        <div class="quest-progress-fill" style="width: {% widthratio profile.streak_days 7 100 %}%;"></div>
+                    </div>
+                </div>
+                <div class="quest-reward">
+                    <div class="reward-item">
+                        <span class="reward-icon">⭐</span>
+                        <span>150 XP</span>
+                    </div>
+                    <div class="reward-item">
+                        <span class="reward-icon">💎</span>
+                        <span>75 Gems</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside class="right-sidebar">
+        <!-- User Stats -->
+        <div class="user-stats-bar">
+            <div class="stat-item">
+                <span class="stat-icon">🔥</span>
+                <span class="stat-value">{{ profile.streak_days }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">💎</span>
+                <span class="stat-value">{{ profile.gems }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">❤️</span>
+                <span class="stat-value">{{ profile.hearts }}</span>
+            </div>
+        </div>
+
+        <!-- Quest Tips Card -->
+        <div class="sidebar-card">
+            <h3>Quest Tips 💡</h3>
+            <div style="margin-top: 16px; font-size: 14px; color: var(--duo-text-light); line-height: 1.6;">
+                <p style="margin-bottom: 12px;">
+                    <strong style="color: var(--duo-text);">Daily Quests</strong> refresh every day at midnight. Complete them before they reset!
+                </p>
+                <p style="margin-bottom: 12px;">
+                    <strong style="color: var(--duo-text);">XP Quest:</strong> Earn XP by completing lessons and exercises.
+                </p>
+                <p style="margin-bottom: 12px;">
+                    <strong style="color: var(--duo-text);">Perfect Lessons:</strong> Complete a lesson without making any mistakes.
+                </p>
+                <p>
+                    <strong style="color: var(--duo-text);">Pro Tip:</strong> Focus on one quest at a time for better results!
+                </p>
+            </div>
+        </div>
+
+        <!-- Motivational Card -->
+        <div class="sidebar-card" style="background: linear-gradient(135deg, #58cc02 0%, #45a302 100%); color: white; border: none;">
+            <h3 style="color: white;">Keep Going! 🚀</h3>
+            <p style="margin-top: 12px; font-size: 14px; opacity: 0.95; line-height: 1.6;">
+                You're doing great! Complete your daily quests to earn bonus rewards and keep your learning momentum going strong.
+            </p>
+        </div>
+
+        <!-- Leaderboard Promo -->
+        <div class="sidebar-card unlock-card">
+            <div class="unlock-icon">🏆</div>
+            <h3>Compete with Friends!</h3>
+            <p>Complete more quests to climb the leaderboard and show off your skills.</p>
+            <button class="btn" style="margin-top: 16px; width: 100%;">VIEW LEADERBOARD</button>
+        </div>
+    </aside>
+</div>
+{% endblock %}

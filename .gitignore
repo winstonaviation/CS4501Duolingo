@@ -2,3 +2,8 @@
 db.sqlite3
 *.pyc
 __pycache__/
+.env
+AUTH_README.md
+AUTHENTICATION_SUMMARY.md
+GOOGLE_OAUTH_SETUP.md
+QUICKSTART.md
