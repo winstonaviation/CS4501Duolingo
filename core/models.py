@@ -148,9 +148,11 @@ class LessonProgress(models.Model):
 class UserProfile(models.Model):
     SPANISH = "es"
     CHINESE = "zh"
+    FRENCH = "fr"
     LANGUAGE_CHOICES = [
         (SPANISH, "Spanish"),
         (CHINESE, "Chinese"),
+        (FRENCH, "French"),
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")

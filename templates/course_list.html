@@ -1,35 +1,229 @@
-{% extends "base.html" %}
-{% block title %}All Courses · Duolingo{% endblock %}
-{% block content %}
-<div style="margin-bottom: 32px;">
-  <h2>All Language Courses</h2>
-  <p style="color: #777; font-size: 18px;">
-    Choose a language to start your learning journey
-  </p>
-</div>
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Your Language - Duolingo</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Ctext%20y%3D%22.9em%22%20font-size%3D%2290%22%3E%F0%9F%A6%89%3C%2Ftext%3E%3C%2Fsvg%3E">
+    <style>
+        .course-selection-page {
+            min-height: 100vh;
+            background: #ffffff;
+            padding: 40px 24px;
+        }
 
-<ul class="course-grid">
-  {% for c in courses %}
-    <li>
-      <a href="{% url 'course_detail' c.slug %}" class="course-card">
-        <h3>{{ c.title }}</h3>
-        <div class="language-pair">
-          {{ c.from_language }} → {{ c.to_language }}
+        .course-selection-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .course-selection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 48px;
+        }
+
+        .course-selection-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--duo-text);
+        }
+
+        .language-dropdown {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: white;
+            border: 2px solid var(--duo-gray);
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--duo-text-light);
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .language-dropdown:hover {
+            border-color: var(--duo-text-light);
+        }
+
+        .language-courses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 24px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .language-course-card {
+            background: white;
+            border: 2px solid var(--duo-gray);
+            border-radius: 16px;
+            padding: 32px 24px;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .language-course-card:hover {
+            border-color: var(--duo-text-light);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .language-course-card.selected {
+            border-color: var(--duo-green);
+            border-width: 3px;
+        }
+
+        .selected-checkmark {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            background: var(--duo-green);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            font-weight: 900;
+        }
+
+        .language-flag-large {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .language-flag-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Flag images using CSS */
+        .flag-spanish {
+            background: linear-gradient(to bottom, 
+                #c60b1e 0%, #c60b1e 25%,
+                #ffc400 25%, #ffc400 75%,
+                #c60b1e 75%, #c60b1e 100%);
+        }
+
+        .flag-french {
+            background: linear-gradient(to right,
+                #002395 0%, #002395 33.33%,
+                #ffffff 33.33%, #ffffff 66.66%,
+                #ed2939 66.66%, #ed2939 100%);
+        }
+
+        .flag-chinese {
+            background: #de2910;
+            position: relative;
+        }
+
+        .flag-chinese::before {
+            content: '⭐';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            font-size: 16px;
+            color: #ffde00;
+        }
+
+        .language-course-card h3 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--duo-text);
+            margin: 0;
+        }
+
+        .learner-count {
+            font-size: 15px;
+            color: var(--duo-text-light);
+            margin: 0;
+        }
+
+        @media (max-width: 768px) {
+            .course-selection-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .language-courses-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="course-selection-page">
+        <div class="course-selection-container">
+            <div class="course-selection-header">
+                <h1>Courses for English Speakers</h1>
+                <div class="language-dropdown">
+                    <span>I SPEAK ENGLISH</span>
+                    <span>▼</span>
+                </div>
+            </div>
+
+            <ul class="language-courses-grid">
+                <!-- Spanish -->
+                <li>
+                    <a href="{% url 'course_detail' 'spanish-to-english' %}" class="language-course-card {% if selected_language == 'es' %}selected{% endif %}">
+                        {% if selected_language == 'es' %}
+                            <div class="selected-checkmark">✓</div>
+                        {% endif %}
+                        <div class="language-flag-large flag-spanish"></div>
+                        <h3>Spanish</h3>
+                        <p class="learner-count">48.8M learners</p>
+                    </a>
+                </li>
+
+                <!-- French -->
+                <li>
+                    <a href="{% url 'course_detail' 'french-to-english' %}" class="language-course-card {% if selected_language == 'fr' %}selected{% endif %}">
+                        {% if selected_language == 'fr' %}
+                            <div class="selected-checkmark">✓</div>
+                        {% endif %}
+                        <div class="language-flag-large flag-french"></div>
+                        <h3>French</h3>
+                        <p class="learner-count">27.2M learners</p>
+                    </a>
+                </li>
+
+                <!-- Chinese -->
+                <li>
+                    <a href="{% url 'course_detail' 'zh-en-basics' %}" class="language-course-card {% if selected_language == 'zh' %}selected{% endif %}">
+                        {% if selected_language == 'zh' %}
+                            <div class="selected-checkmark">✓</div>
+                        {% endif %}
+                        <div class="language-flag-large flag-chinese"></div>
+                        <h3>Chinese</h3>
+                        <p class="learner-count">11.8M learners</p>
+                    </a>
+                </li>
+            </ul>
         </div>
-        {% if c.description %}
-          <div class="description">{{ c.description }}</div>
-        {% endif %}
-      </a>
-    </li>
-  {% empty %}
-    <li style="grid-column: 1/-1;">
-      <div class="course-card" style="text-align: center; padding: 40px;">
-        <p style="font-size: 18px; color: #777;">No courses available yet.</p>
-        {% if user.is_staff %}
-          <a href="/admin/core/course/add/" class="btn mt-4">Create a Course</a>
-        {% endif %}
-      </div>
-    </li>
-  {% endfor %}
-</ul>
-{% endblock %}
+    </div>
+</body>
+</html>

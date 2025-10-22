@@ -2,9 +2,26 @@
 {% block title %}Lesson Complete! · Duolingo{% endblock %}
 {% block content %}
 <div class="completion-container">
-  <div class="completion-icon">🎉</div>
+  <div class="completion-icon">
+    {% if score == total %}
+      🏆
+    {% elif score >= total|floatformat:0|add:"-1" %}
+      🌟
+    {% else %}
+      🎉
+    {% endif %}
+  </div>
 
-  <h2 style="font-size: 48px; margin-bottom: 16px;">Lesson Complete!</h2>
+  <h2 style="font-size: 48px; margin-bottom: 16px;">
+    {% if score == total %}
+      Perfect!
+    {% elif score >= total|floatformat:0|add:"-1" %}
+      Awesome!
+    {% else %}
+      Lesson Complete!
+    {% endif %}
+  </h2>
+  
   <p style="font-size: 20px; color: #777;">
     Great job on completing <strong>{{ lesson.title }}</strong>!
   </p>
@@ -14,6 +31,14 @@
     <div class="score">{{ score }}/{{ total }}</div>
     <div class="total">
       {% widthratio score total 100 %}% Correct
+    </div>
+
+    <!-- XP Earned -->
+    <div style="margin-top: 24px; padding: 20px; background: #fff9e6; border-radius: 12px;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 20px; font-weight: 700; color: var(--duo-orange);">
+        <span style="font-size: 32px;">⭐</span>
+        <span>+{{ completion_xp }} XP</span>
+      </div>
     </div>
 
     {% if score == total %}
@@ -27,20 +52,60 @@
     {% endif %}
   </div>
 
+  <!-- Stats Grid -->
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; max-width: 500px;">
+    <div style="text-align: center; padding: 16px; background: white; border: 2px solid var(--duo-gray); border-radius: 12px;">
+      <div style="font-size: 32px; margin-bottom: 8px;">🔥</div>
+      <div style="font-size: 20px; font-weight: 700; color: var(--duo-text);">{{ profile.streak_days }}</div>
+      <div style="font-size: 12px; color: var(--duo-text-light); font-weight: 600;">Day Streak</div>
+    </div>
+
+    <div style="text-align: center; padding: 16px; background: white; border: 2px solid var(--duo-gray); border-radius: 12px;">
+      <div style="font-size: 32px; margin-bottom: 8px;">⭐</div>
+      <div style="font-size: 20px; font-weight: 700; color: var(--duo-text);">{{ profile.xp }}</div>
+      <div style="font-size: 12px; color: var(--duo-text-light); font-weight: 600;">Total XP</div>
+    </div>
+
+    <div style="text-align: center; padding: 16px; background: white; border: 2px solid var(--duo-gray); border-radius: 12px;">
+      <div style="font-size: 32px; margin-bottom: 8px;">❤️</div>
+      <div style="font-size: 20px; font-weight: 700; color: var(--duo-text);">{{ profile.hearts }}</div>
+      <div style="font-size: 12px; color: var(--duo-text-light); font-weight: 600;">Hearts Left</div>
+    </div>
+  </div>
+
   <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
     <a href="{% url 'lesson_start' lesson.id %}" class="btn btn-secondary">
       Practice Again
     </a>
-    <a href="{% url 'course_detail' lesson.course.slug %}" class="btn">
+    <a href="{% url 'course_detail' lesson.unit.section.course.slug %}" class="btn">
       Continue Learning
     </a>
   </div>
 
-  <div style="margin-top: 48px; padding: 24px; background: white; border-radius: 16px; box-shadow: var(--shadow);">
-    <h4 style="margin-bottom: 16px;">Keep Your Streak Going!</h4>
-    <p style="color: #777;">
-      Come back tomorrow to continue your learning journey and maintain your progress.
+  <!-- Motivational Message -->
+  <div style="margin-top: 48px; padding: 24px; background: white; border-radius: 16px; box-shadow: var(--shadow); max-width: 500px;">
+    <h4 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px; justify-content: center;">
+      <span style="font-size: 28px;">🦉</span>
+      <span>Keep Your Streak Going!</span>
+    </h4>
+    <p style="color: #777; line-height: 1.6;">
+      Come back tomorrow to continue your learning journey and maintain your progress. Consistent practice is the key to mastery!
     </p>
   </div>
+
+  <!-- Review Wrong Answers -->
+  {% if score < total %}
+    <div style="margin-top: 24px; padding: 24px; background: #fef7ff; border: 2px solid var(--duo-purple); border-radius: 16px; max-width: 500px;">
+      <h4 style="margin-bottom: 12px; color: var(--duo-purple);">
+        📝 Want to Review?
+      </h4>
+      <p style="color: #777; margin-bottom: 16px; font-size: 14px;">
+        You got {{ total|add:"-"|add:score }} question{{ total|add:"-"|add:score|pluralize }} wrong. Practice makes perfect!
+      </p>
+      <a href="{% url 'lesson_start' lesson.id %}" class="btn btn-small" style="background: var(--duo-purple); box-shadow: 0 4px 0 #9333ea;">
+        Review Mistakes
+      </a>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}

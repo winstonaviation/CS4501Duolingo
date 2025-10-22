@@ -7,6 +7,89 @@
     <title>{% block title %}Duolingo{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'style.css' %}">
     <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Ctext%20y%3D%22.9em%22%20font-size%3D%2290%22%3E%F0%9F%A6%89%3C%2Ftext%3E%3C%2Fsvg%3E">
+    <style>
+        .language-switcher {
+            position: relative;
+            display: inline-block;
+        }
+
+        .language-switcher-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.2s;
+        }
+
+        .language-switcher-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .language-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: white;
+            border: 2px solid var(--duo-gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s;
+            z-index: 1000;
+        }
+
+        .language-dropdown-menu.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .language-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: var(--duo-text);
+            font-size: 15px;
+            font-weight: 600;
+            transition: background 0.2s;
+            border-bottom: 1px solid var(--duo-gray);
+        }
+
+        .language-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .language-menu-item:hover {
+            background: #f7f7f7;
+        }
+
+        .language-menu-flag {
+            font-size: 24px;
+        }
+
+        .language-menu-icon {
+            font-size: 20px;
+        }
+
+        .language-menu-check {
+            margin-left: auto;
+            color: var(--duo-green);
+            font-weight: 900;
+            font-size: 18px;
+        }
+
+        .language-menu-divider {
+            height: 1px;
+            background: var(--duo-gray);
+            margin: 4px 0;
+        }
+    </style>
 </head>
 <body>
     <header class="site-header">
@@ -15,11 +98,48 @@
             <nav>
                 {% if user.is_authenticated %}
                     {% if user.profile.has_selected_language %}
-                        <span class="language-flag-badge" title="Learning {{ user.profile.get_learning_language_display }}">
-                            {% if user.profile.learning_language == 'es' %}🇪🇸{% elif user.profile.learning_language == 'zh' %}🇨🇳{% endif %}
-                        </span>
+                        <!-- Language Switcher Dropdown -->
+                        <div class="language-switcher">
+                            <button class="language-switcher-btn" onclick="toggleLanguageMenu()">
+                                <span class="language-flag-badge" title="Learning {{ user.profile.get_learning_language_display }}">
+                                    {% if user.profile.learning_language == 'es' %}🇪🇸
+                                    {% elif user.profile.learning_language == 'zh' %}🇨🇳
+                                    {% elif user.profile.learning_language == 'fr' %}🇫🇷
+                                    {% endif %}
+                                </span>
+                            </button>
+                            <div class="language-dropdown-menu" id="languageMenu">
+                                <a href="{% url 'course_detail' 'spanish-to-english' %}" class="language-menu-item">
+                                    <span class="language-menu-flag">🇪🇸</span>
+                                    <span>Spanish</span>
+                                    {% if user.profile.learning_language == 'es' %}
+                                        <span class="language-menu-check">✓</span>
+                                    {% endif %}
+                                </a>
+                                <a href="{% url 'course_detail' 'french-to-english' %}" class="language-menu-item">
+                                    <span class="language-menu-flag">🇫🇷</span>
+                                    <span>French</span>
+                                    {% if user.profile.learning_language == 'fr' %}
+                                        <span class="language-menu-check">✓</span>
+                                    {% endif %}
+                                </a>
+                                <a href="{% url 'course_detail' 'zh-en-basics' %}" class="language-menu-item">
+                                    <span class="language-menu-flag">🇨🇳</span>
+                                    <span>Chinese</span>
+                                    {% if user.profile.learning_language == 'zh' %}
+                                        <span class="language-menu-check">✓</span>
+                                    {% endif %}
+                                </a>
+                                <div class="language-menu-divider"></div>
+                                <a href="{% url 'course_list' %}" class="language-menu-item">
+                                    <span class="language-menu-icon">🌍</span>
+                                    <span>All Courses</span>
+                                </a>
+                            </div>
+                        </div>
                     {% endif %}
                     <a href="{% url 'course_list' %}">Courses</a>
+                    <a href="{% url 'user_profile' %}">Profile</a>
                     <span class="user-info">Hi, {{ user.email|default:user.username }}!</span>
                     <form action="{% url 'account_logout' %}" method="post" style="display: inline;">
                         {% csrf_token %}
@@ -34,5 +154,21 @@
     <main>
         {% block content %}{% endblock %}
     </main>
+
+    <script>
+        function toggleLanguageMenu() {
+            const menu = document.getElementById('languageMenu');
+            menu.classList.toggle('show');
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const switcher = document.querySelector('.language-switcher');
+            const menu = document.getElementById('languageMenu');
+            if (switcher && menu && !switcher.contains(event.target)) {
+                menu.classList.remove('show');
+            }
+        });
+    </script>
 </body>
 </html>

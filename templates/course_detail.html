@@ -4,62 +4,225 @@
 {% block title %}{{ course.title }} · Duolingo{% endblock %}
 
 {% block content %}
-<div class="text-center" style="margin-bottom: 40px;">
-  <h2>{{ course.title }}</h2>
-  <p style="font-size: 18px; color: #777; max-width: 700px; margin: 16px auto;">
-    {{ course.description|default:"Master the basics and beyond!" }}
-  </p>
-  <div style="margin-top: 16px;">
-    <span style="background: var(--duo-gray); padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;">
-      {{ course.from_language }} → {{ course.to_language }}
-    </span>
-  </div>
-</div>
+<div class="main-layout">
+  <!-- Left Sidebar -->
+  <aside class="left-sidebar">
+    <nav class="sidebar-nav">
+      <a href="{% url 'home' %}" class="sidebar-nav-item active">
+        <span class="sidebar-nav-icon">🏠</span>
+        <span>LEARN</span>
+      </a>
+      <a href="#" class="sidebar-nav-item">
+        <span class="sidebar-nav-icon">🏆</span>
+        <span>LEADERBOARDS</span>
+      </a>
+      <a href="#" class="sidebar-nav-item">
+        <span class="sidebar-nav-icon">📋</span>
+        <span>QUESTS</span>
+      </a>
+      <a href="#" class="sidebar-nav-item">
+        <span class="sidebar-nav-icon">🏪</span>
+        <span>SHOP</span>
+      </a>
+      <a href="#" class="sidebar-nav-item">
+        <span class="sidebar-nav-icon">👤</span>
+        <span>PROFILE</span>
+      </a>
+      <a href="#" class="sidebar-nav-item">
+        <span class="sidebar-nav-icon">⋯</span>
+        <span>MORE</span>
+      </a>
+    </nav>
+  </aside>
 
-<h3 class="text-center">Learning Path</h3>
-<ul class="lesson-path">
-{% for ls in lessons %}
-  {% if user.is_authenticated %}
-    {% with lp=progress_map|get_item:ls.id %}
-      <li class="lesson-node {% if lp and lp.completed %}completed{% endif %}">
-        <div class="lesson-icon">
-          {% if lp and lp.completed %}★{% else %}{{ forloop.counter }}{% endif %}
-        </div>
-        <div class="lesson-info">
-          <h4>{{ ls.title }}</h4>
-          {% if lp and lp.completed %}
-            <span class="lesson-status completed">Completed ✓</span>
-          {% else %}
-            <span class="lesson-status">Ready</span>
-          {% endif %}
-          <div style="margin-top: 12px;">
-            <a href="{% url 'lesson_start' ls.id %}" class="btn btn-small">
-              {% if lp and lp.completed %}Practice Again{% else %}Start Lesson{% endif %}
-            </a>
+  <!-- Main Content -->
+  <main class="main-content">
+    {% for section in sections %}
+      {% for unit in section.units.all %}
+        <!-- Unit Header -->
+        <div class="learning-path-header">
+          <button class="guidebook-btn">
+            <span>📖</span>
+            <span>GUIDEBOOK</span>
+          </button>
+          <div class="path-header-content">
+            <div class="path-section-title">Section {{ section.order }}, Unit {{ unit.order }}</div>
+            <h2 class="path-unit-title">{{ unit.title }}</h2>
+            {% if unit.description %}
+              <p class="path-unit-description">{{ unit.description }}</p>
+            {% endif %}
           </div>
         </div>
-      </li>
-    {% endwith %}
-  {% else %}
-    <li class="lesson-node">
-      <div class="lesson-icon">{{ forloop.counter }}</div>
-      <div class="lesson-info">
-        <h4>{{ ls.title }}</h4>
-        <div style="margin-top: 12px;">
-          <a href="/admin/login/?next={% url 'lesson_start' ls.id %}" class="btn btn-small">
-            Login to Start
+
+        <!-- Learning Path -->
+        <ul class="lesson-path">
+          {% for lesson in unit.lessons.all %}
+            {% if user.is_authenticated %}
+              {% with lp=progress_map|get_item:lesson.id %}
+                <li class="lesson-node {% if lp.completed %}completed{% endif %} {% if lesson.is_locked %}locked{% endif %} {% if lesson.lesson_type == 'practice' %}practice{% elif lesson.lesson_type == 'story' %}story{% elif lesson.lesson_type == 'unit_review' %}review{% endif %}">
+                  
+                  <a href="{% if not lesson.is_locked %}{% url 'lesson_start' lesson.id %}{% else %}#{% endif %}" class="lesson-icon-wrapper">
+                    <div class="lesson-icon">
+                      {% if lesson.lesson_type == 'lesson' %}
+                        {% if lp.completed %}
+                          ⭐
+                        {% elif lesson.is_locked %}
+                          🔒
+                        {% else %}
+                          {{ forloop.counter }}
+                        {% endif %}
+                      {% elif lesson.lesson_type == 'practice' %}
+                        💪
+                      {% elif lesson.lesson_type == 'story' %}
+                        📖
+                      {% elif lesson.lesson_type == 'unit_review' %}
+                        🏆
+                      {% endif %}
+                    </div>
+                  </a>
+
+                  <div class="lesson-info">
+                    <h4>{{ lesson.title }}</h4>
+                    
+                    {% if lesson.is_locked %}
+                      <span class="lesson-status locked">Locked</span>
+                    {% elif lp.completed %}
+                      <span class="lesson-status completed">Completed ✓</span>
+                    {% else %}
+                      <span class="lesson-status ready">Ready</span>
+                    {% endif %}
+
+                    {% if not lesson.is_locked %}
+                      <div style="margin-top: 12px;">
+                        <a href="{% url 'lesson_start' lesson.id %}" class="btn btn-small">
+                          {% if lp.completed %}
+                            Practice Again
+                          {% else %}
+                            Start Lesson
+                          {% endif %}
+                        </a>
+                      </div>
+                    {% endif %}
+                  </div>
+                </li>
+              {% endwith %}
+            {% else %}
+              <li class="lesson-node">
+                <div class="lesson-icon-wrapper">
+                  <div class="lesson-icon">{{ forloop.counter }}</div>
+                </div>
+                <div class="lesson-info">
+                  <h4>{{ lesson.title }}</h4>
+                  <div style="margin-top: 12px;">
+                    <a href="{% url 'account_login' %}?next={% url 'lesson_start' lesson.id %}" class="btn btn-small">
+                      Login to Start
+                    </a>
+                  </div>
+                </div>
+              </li>
+            {% endif %}
+          {% empty %}
+            <li style="text-align: center; padding: 40px;">
+              <p style="font-size: 18px; color: #777;">No lessons in this unit yet.</p>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endfor %}
+    {% empty %}
+      <div style="text-align: center; padding: 80px;">
+        <div style="font-size: 80px; margin-bottom: 24px;">📚</div>
+        <h2>No content yet</h2>
+        <p style="font-size: 18px; color: #777; margin: 16px 0;">
+          This course doesn't have any sections or units yet.
+        </p>
+        {% if user.is_staff %}
+          <a href="/admin/core/section/add/?course={{ course.id }}" class="btn mt-4">
+            Add Sections & Units
           </a>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </main>
+
+  <!-- Right Sidebar -->
+  <aside class="right-sidebar">
+    {% if user.is_authenticated %}
+      <!-- User Stats -->
+      <div class="user-stats-bar">
+        <div class="stat-item">
+          <span class="stat-icon">🔥</span>
+          <span class="stat-value">{{ profile.streak_days }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">💎</span>
+          <span class="stat-value">{{ profile.gems }}</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-icon">❤️</span>
+          <span class="stat-value">{{ profile.hearts }}</span>
         </div>
       </div>
-    </li>
-  {% endif %}
-{% empty %}
-  <li style="text-align: center; padding: 40px;">
-    <p style="font-size: 18px; color: #777;">No lessons available yet.</p>
-    {% if user.is_staff %}
-      <a href="/admin/core/lesson/add/" class="btn mt-4">Add Lessons</a>
+
+      <!-- Super Duolingo Promo -->
+      <div class="sidebar-card super-promo">
+        <div class="super-mascot">🦉</div>
+        <div class="super-badge">SUPER</div>
+        <h3>Try Super for free</h3>
+        <p>No ads, personalized practice, and unlimited Legendary!</p>
+        <button class="btn">TRY 1 WEEK FREE</button>
+      </div>
+
+      <!-- Unlock Leaderboards -->
+      <div class="sidebar-card unlock-card">
+        <div class="unlock-icon">🔒</div>
+        <h3>Unlock Leaderboards!</h3>
+        <p>Complete 10 more lessons to start competing</p>
+      </div>
+
+      <!-- Daily Quests -->
+      {% if daily_quests %}
+        <div class="sidebar-card">
+          <div class="daily-quests-header">
+            <h3>Daily Quests</h3>
+            <a href="#" class="view-all-link">View All</a>
+          </div>
+          
+          {% for user_quest in daily_quests %}
+            <div class="quest-item">
+              <div class="quest-header">
+                <span class="quest-icon">⚡</span>
+                <span class="quest-title">{{ user_quest.quest.title }}</span>
+              </div>
+              <div class="quest-progress-bar">
+                <div class="quest-progress-fill" 
+                     style="width: {% widthratio user_quest.progress user_quest.quest.target_value 100 %}%;">
+                </div>
+              </div>
+              <div class="quest-progress-text">
+                {{ user_quest.progress }} / {{ user_quest.quest.target_value }}
+              </div>
+              {% if user_quest.quest.xp_reward > 0 %}
+                <div class="quest-reward">
+                  <span>⭐</span>
+                  <span>{{ user_quest.quest.xp_reward }} XP</span>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% else %}
+      <!-- Promo for non-logged in users -->
+      <div class="sidebar-card">
+        <h3>Start Learning Today!</h3>
+        <p style="margin-bottom: 16px; color: var(--duo-text-light);">
+          Sign up to track your progress and earn rewards.
+        </p>
+        <a href="{% url 'account_signup' %}" class="btn" style="width: 100%;">
+          Get Started
+        </a>
+      </div>
     {% endif %}
-  </li>
-{% endfor %}
-</ul>
+  </aside>
+</div>
 {% endblock %}

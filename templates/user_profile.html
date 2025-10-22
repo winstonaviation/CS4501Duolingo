@@ -1,0 +1,514 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ user.username }} - Profile · Duolingo{% endblock %}
+
+{% block content %}
+<style>
+    .profile-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr 380px;
+        gap: 24px;
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 24px;
+        min-height: calc(100vh - 80px);
+    }
+
+    .profile-main {
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 16px;
+        padding: 40px;
+    }
+
+    .profile-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .profile-avatar-container {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin: 0 auto 24px;
+        background: linear-gradient(135deg, #e3f2fd 0%, #90caf9 100%);
+        border-radius: 50%;
+        border: 4px dashed #1cb0f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 80px;
+    }
+
+    .profile-avatar-edit {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 48px;
+        height: 48px;
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 24px;
+        transition: all 0.2s;
+    }
+
+    .profile-avatar-edit:hover {
+        border-color: var(--duo-blue);
+        transform: scale(1.1);
+    }
+
+    .profile-name {
+        font-size: 32px;
+        font-weight: 900;
+        color: var(--duo-text);
+        margin-bottom: 8px;
+    }
+
+    .profile-username {
+        font-size: 15px;
+        color: var(--duo-text-light);
+        margin-bottom: 8px;
+    }
+
+    .profile-joined {
+        font-size: 14px;
+        color: var(--duo-text-light);
+        margin-bottom: 20px;
+    }
+
+    .profile-stats-inline {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        margin-bottom: 16px;
+    }
+
+    .profile-stat-link {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--duo-text);
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .profile-stat-link:hover {
+        color: var(--duo-blue);
+    }
+
+    .profile-stat-link .count {
+        color: var(--duo-blue);
+    }
+
+    .profile-language-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 16px;
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 12px;
+        font-size: 24px;
+    }
+
+    .profile-tabs {
+        display: flex;
+        gap: 32px;
+        border-bottom: 2px solid var(--duo-gray);
+        margin-bottom: 32px;
+    }
+
+    .profile-tab {
+        padding: 16px 0;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--duo-text-light);
+        text-transform: uppercase;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .profile-tab:hover {
+        color: var(--duo-text);
+    }
+
+    .profile-tab.active {
+        color: var(--duo-blue);
+        border-bottom-color: var(--duo-blue);
+    }
+
+    .profile-section {
+        margin-bottom: 40px;
+    }
+
+    .profile-section h2 {
+        font-size: 24px;
+        font-weight: 900;
+        color: var(--duo-text);
+        margin-bottom: 24px;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin-bottom: 40px;
+    }
+
+    .stat-card {
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .stat-value {
+        font-size: 28px;
+        font-weight: 900;
+        color: var(--duo-text);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .stat-icon {
+        font-size: 32px;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: var(--duo-text-light);
+    }
+
+    .achievements-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .view-all-achievements {
+        color: var(--duo-blue);
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        text-decoration: none;
+        letter-spacing: 0.5px;
+    }
+
+    .view-all-achievements:hover {
+        text-decoration: underline;
+    }
+
+    .achievements-placeholder {
+        text-align: center;
+        padding: 60px 24px;
+        color: var(--duo-text-light);
+        background: #f7f7f7;
+        border-radius: 12px;
+    }
+
+    .achievements-placeholder-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    /* Right Sidebar */
+    .profile-sidebar-card {
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+
+    .profile-sidebar-card h3 {
+        font-size: 18px;
+        font-weight: 900;
+        color: var(--duo-text);
+        margin-bottom: 16px;
+    }
+
+    .friends-illustration {
+        width: 100%;
+        margin-bottom: 16px;
+        text-align: center;
+        font-size: 120px;
+    }
+
+    .friends-message {
+        font-size: 14px;
+        color: var(--duo-text-light);
+        text-align: center;
+        line-height: 1.6;
+        margin-bottom: 24px;
+    }
+
+    .add-friends-section h4 {
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--duo-text);
+        margin-bottom: 16px;
+    }
+
+    .friend-action-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: #f7f7f7;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: var(--duo-text);
+    }
+
+    .friend-action-item:hover {
+        background: #e5e5e5;
+    }
+
+    .friend-action-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        background: white;
+        border-radius: 12px;
+    }
+
+    .friend-action-text {
+        flex: 1;
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .friend-action-arrow {
+        font-size: 20px;
+        color: var(--duo-text-light);
+    }
+
+    .profile-footer {
+        text-align: center;
+        padding: 24px;
+        color: var(--duo-text-light);
+        font-size: 13px;
+    }
+
+    .profile-footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px 24px;
+        margin-top: 16px;
+    }
+
+    .profile-footer-links a {
+        color: var(--duo-text-light);
+        text-decoration: none;
+        text-transform: uppercase;
+        font-weight: 600;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+    }
+
+    .profile-footer-links a:hover {
+        color: var(--duo-text);
+    }
+
+    @media (max-width: 1200px) {
+        .profile-layout {
+            grid-template-columns: 1fr 380px;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .profile-layout {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="profile-layout">
+    <!-- Left Sidebar (reuse from course_detail.html) -->
+    <aside class="left-sidebar">
+        <nav class="sidebar-nav">
+            <a href="{% url 'home' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🏠</span>
+                <span>LEARN</span>
+            </a>
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🏆</span>
+                <span>LEADERBOARDS</span>
+            </a>
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🎯</span>
+                <span>QUESTS</span>
+            </a>
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🛍️</span>
+                <span>SHOP</span>
+            </a>
+            <a href="{% url 'user_profile' %}" class="sidebar-nav-item active">
+                <span class="sidebar-nav-icon">👤</span>
+                <span>PROFILE</span>
+            </a>
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">⋯</span>
+                <span>MORE</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Profile Content -->
+    <main class="profile-main">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar-container">
+                <div class="profile-avatar-edit">✏️</div>
+                <span>➕</span>
+            </div>
+            
+            <h1 class="profile-name">{{ user.first_name|default:user.username }}</h1>
+            <p class="profile-username">{{ user.username }}</p>
+            <p class="profile-joined">Joined {{ profile.created_at|date:"F Y" }}</p>
+            
+            <div class="profile-stats-inline">
+                <a href="#" class="profile-stat-link">
+                    <span class="count">0</span> Following
+                </a>
+                <a href="#" class="profile-stat-link">
+                    <span class="count">0</span> Followers
+                </a>
+            </div>
+            
+            {% if profile.learning_language %}
+                <div class="profile-language-badge">
+                    {% if profile.learning_language == 'es' %}🇪🇸
+                    {% elif profile.learning_language == 'zh' %}🇨🇳
+                    {% elif profile.learning_language == 'fr' %}🇫🇷
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tabs -->
+        <div class="profile-tabs">
+            <a href="#" class="profile-tab active">Following</a>
+            <a href="#" class="profile-tab">Followers</a>
+        </div>
+
+        <!-- Statistics Section -->
+        <div class="profile-section">
+            <h2>Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">
+                        <span class="stat-icon">🔥</span>
+                        <span>{{ profile.streak_days }}</span>
+                    </div>
+                    <div class="stat-label">Day streak</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value">
+                        <span class="stat-icon">⚡</span>
+                        <span>{{ profile.xp }}</span>
+                    </div>
+                    <div class="stat-label">Total XP</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value">
+                        <span class="stat-icon">🏅</span>
+                        <span>None</span>
+                    </div>
+                    <div class="stat-label">Current league</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-value">
+                        <span class="stat-icon">🥉</span>
+                        <span>0</span>
+                    </div>
+                    <div class="stat-label">Top 3 finishes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievements Section -->
+        <div class="profile-section">
+            <div class="achievements-header">
+                <h2>Achievements</h2>
+                <a href="#" class="view-all-achievements">View All</a>
+            </div>
+            
+            <div class="achievements-placeholder">
+                <div class="achievements-placeholder-icon">🏆</div>
+                <p>Complete lessons to earn your first achievement!</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside class="right-sidebar">
+        <!-- Friends Card -->
+        <div class="profile-sidebar-card">
+            <div class="friends-illustration">
+                👥
+            </div>
+            <p class="friends-message">
+                Learning is more fun and effective when you connect with others.
+            </p>
+            
+            <div class="add-friends-section">
+                <h4>Add friends</h4>
+                
+                <a href="#" class="friend-action-item">
+                    <div class="friend-action-icon">🔍</div>
+                    <div class="friend-action-text">Find friends</div>
+                    <div class="friend-action-arrow">›</div>
+                </a>
+                
+                <a href="#" class="friend-action-item">
+                    <div class="friend-action-icon">🦉</div>
+                    <div class="friend-action-text">Invite friends</div>
+                    <div class="friend-action-arrow">›</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Footer Links -->
+        <div class="profile-footer">
+            <div class="profile-footer-links">
+                <a href="#">About</a>
+                <a href="#">Blog</a>
+                <a href="#">Store</a>
+                <a href="#">Efficacy</a>
+                <a href="#">Careers</a>
+                <a href="#">Investors</a>
+                <a href="#">Terms</a>
+                <a href="#">Privacy</a>
+            </div>
+        </div>
+    </aside>
+</div>
+{% endblock %}

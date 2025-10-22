@@ -203,8 +203,38 @@ def language_selection(request):
             return redirect("home")
 
     languages = [
-        {"code": UserProfile.SPANISH, "name": "Spanish", "flag": "🇪🇸", "native_name": "Español"},
-        {"code": UserProfile.CHINESE, "name": "Chinese", "flag": "🇨🇳", "native_name": "中文"},
-    ]
+    {"code": UserProfile.SPANISH, "name": "Spanish", "flag": "🇪🇸", "native_name": "Español"},
+    {"code": UserProfile.FRENCH, "name": "French", "flag": "🇫🇷", "native_name": "Français"},
+    {"code": UserProfile.CHINESE, "name": "Chinese", "flag": "🇨🇳", "native_name": "中文"},
+]
 
     return render(request, "language_selection.html", {"languages": languages})
+
+# Add these new views to your existing core/views.py
+from .models import (
+    Course, Section, Unit, Lesson, Exercise, ExerciseChoice,
+    Attempt, LessonProgress, UserProfile, DailyQuest,
+    UserDailyQuest, Achievement, UserAchievement
+)
+
+@login_required
+def user_profile(request):
+    """Display user profile page"""
+    profile = request.user.profile
+    
+    # Get user statistics
+    total_lessons_completed = LessonProgress.objects.filter(
+        user=request.user,
+        completed=True
+    ).count()
+    
+    # Get recent achievements
+    recent_achievements = UserAchievement.objects.filter(
+        user=request.user
+    ).select_related('achievement').order_by('-earned_at')[:6]
+    
+    return render(request, 'user_profile.html', {
+        'profile': profile,
+        'total_lessons_completed': total_lessons_completed,
+        'recent_achievements': recent_achievements,
+    })
