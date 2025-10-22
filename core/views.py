@@ -19,28 +19,69 @@ def home(request):
     if not profile.has_selected_language:
         return redirect("language_selection")
 
-    # Show courses for logged-in users
+    # Redirect to the course detail page for their learning language
+    if profile.learning_language:
+        # Map learning language to course slug
+        language_map = {
+            'es': 'spanish-to-english',
+            'zh': 'zh-en-basics',
+            'fr': 'french-to-english',
+        }
+        course_slug = language_map.get(profile.learning_language)
+        if course_slug:
+            return redirect("course_detail", slug=course_slug)
+    
+    # Fallback: show courses list
     top_courses = Course.objects.annotate(n_lessons=Count("sections__units__lessons")).order_by("-n_lessons")[:6]
     return render(request, "home.html", {"courses": top_courses})
 
 def course_list(request):
     courses = Course.objects.all()
-    return render(request, "course_list.html", {"courses": courses})
+    selected_language = None
+    if request.user.is_authenticated:
+        profile = request.user.profile
+        selected_language = profile.learning_language
+    return render(request, "course_list.html", {"courses": courses, "selected_language": selected_language})
 
 def course_detail(request, slug):
     course = get_object_or_404(Course, slug=slug)
     sections = course.sections.all().prefetch_related("units__lessons")
 
-    # attach progress if logged in
-    progress_map = {}
+    # Update user's learning language based on course they're viewing
     if request.user.is_authenticated:
         profile = request.user.profile
+        
+        # Map course slug to language code
+        slug_to_language = {
+            'spanish-to-english': 'es',
+            'zh-en-basics': 'zh',
+            'french-to-english': 'fr',
+        }
+        
+        course_language = slug_to_language.get(slug)
+        if course_language and profile.learning_language != course_language:
+            profile.learning_language = course_language
+            profile.has_selected_language = True
+            profile.save()
+
+        # Get progress map
         all_lessons = Lesson.objects.filter(unit__section__course=course)
         progress_map = {lp.lesson_id: lp for lp in LessonProgress.objects.filter(user=request.user, lesson__in=all_lessons)}
 
-        # Get daily quests
+        # Get or create daily quests for today
         today = date.today()
         daily_quests = UserDailyQuest.objects.filter(user=request.user, date_assigned=today)
+        
+        # If no quests exist for today, create them
+        if not daily_quests.exists():
+            active_quests = DailyQuest.objects.filter(is_active=True)
+            for quest in active_quests:
+                UserDailyQuest.objects.create(
+                    user=request.user,
+                    quest=quest,
+                    date_assigned=today
+                )
+            daily_quests = UserDailyQuest.objects.filter(user=request.user, date_assigned=today)
 
         return render(request, "course_detail.html", {
             "course": course,
@@ -50,7 +91,7 @@ def course_detail(request, slug):
             "daily_quests": daily_quests,
         })
 
-    return render(request, "course_detail.html", {"course": course, "sections": sections, "progress_map": progress_map})
+    return render(request, "course_detail.html", {"course": course, "sections": sections, "progress_map": {}})
 
 @login_required
 def lesson_start(request, lesson_id):
@@ -108,6 +149,16 @@ def exercise_play(request, lesson_id, index: int):
             profile.lose_heart()
         else:
             profile.add_xp(10)  # Award 10 XP for correct answer
+            
+            # Update XP quest progress
+            today = date.today()
+            xp_quest = UserDailyQuest.objects.filter(
+                user=request.user,
+                quest__quest_type=DailyQuest.EARN_XP,
+                date_assigned=today
+            ).first()
+            if xp_quest:
+                xp_quest.update_progress(10)
 
         # Update streak
         profile.update_streak()
@@ -158,8 +209,19 @@ def lesson_complete(request, lesson_id):
     completion_xp = 20
     profile.add_xp(completion_xp)
 
-    # Update daily quest progress for completing lessons
+    # Update daily quest progress
     today = date.today()
+    
+    # Update XP quest
+    xp_quest = UserDailyQuest.objects.filter(
+        user=request.user,
+        quest__quest_type=DailyQuest.EARN_XP,
+        date_assigned=today
+    ).first()
+    if xp_quest:
+        xp_quest.update_progress(completion_xp)
+    
+    # Update lessons quest
     lesson_quest = UserDailyQuest.objects.filter(
         user=request.user,
         quest__quest_type=DailyQuest.COMPLETE_LESSONS,
@@ -203,19 +265,12 @@ def language_selection(request):
             return redirect("home")
 
     languages = [
-    {"code": UserProfile.SPANISH, "name": "Spanish", "flag": "🇪🇸", "native_name": "Español"},
-    {"code": UserProfile.FRENCH, "name": "French", "flag": "🇫🇷", "native_name": "Français"},
-    {"code": UserProfile.CHINESE, "name": "Chinese", "flag": "🇨🇳", "native_name": "中文"},
-]
+        {"code": UserProfile.SPANISH, "name": "Spanish", "flag": "🇪🇸", "native_name": "Español"},
+        {"code": UserProfile.FRENCH, "name": "French", "flag": "🇫🇷", "native_name": "Français"},
+        {"code": UserProfile.CHINESE, "name": "Chinese", "flag": "🇨🇳", "native_name": "中文"},
+    ]
 
     return render(request, "language_selection.html", {"languages": languages})
-
-# Add these new views to your existing core/views.py
-from .models import (
-    Course, Section, Unit, Lesson, Exercise, ExerciseChoice,
-    Attempt, LessonProgress, UserProfile, DailyQuest,
-    UserDailyQuest, Achievement, UserAchievement
-)
 
 @login_required
 def user_profile(request):
@@ -237,4 +292,38 @@ def user_profile(request):
         'profile': profile,
         'total_lessons_completed': total_lessons_completed,
         'recent_achievements': recent_achievements,
+    })
+
+@login_required
+def quests(request):
+    """Display quests page with daily and weekly challenges"""
+    profile = request.user.profile
+    today = date.today()
+    
+    # Get or create today's daily quests
+    daily_quests = UserDailyQuest.objects.filter(user=request.user, date_assigned=today)
+    
+    # If no quests exist for today, create them
+    if not daily_quests.exists():
+        active_quests = DailyQuest.objects.filter(is_active=True)
+        for quest in active_quests:
+            UserDailyQuest.objects.create(
+                user=request.user,
+                quest=quest,
+                date_assigned=today
+            )
+        daily_quests = UserDailyQuest.objects.filter(user=request.user, date_assigned=today)
+    
+    # Calculate time remaining until quests refresh
+    from datetime import datetime, timedelta
+    tomorrow = datetime.combine(today + timedelta(days=1), datetime.min.time())
+    time_remaining = tomorrow - datetime.now()
+    hours_remaining = int(time_remaining.total_seconds() // 3600)
+    minutes_remaining = int((time_remaining.total_seconds() % 3600) // 60)
+    
+    return render(request, 'quests.html', {
+        'profile': profile,
+        'daily_quests': daily_quests,
+        'hours_remaining': hours_remaining,
+        'minutes_remaining': minutes_remaining,
     })

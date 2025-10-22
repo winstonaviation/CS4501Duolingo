@@ -10,4 +10,5 @@ urlpatterns = [
     path("lessons/<int:lesson_id>/exercise/<int:index>/", views.exercise_play, name="exercise_play"),
     path("lessons/<int:lesson_id>/complete/", views.lesson_complete, name="lesson_complete"),
     path("profile/", views.user_profile, name="user_profile"),
+    path("quests/", views.quests, name="quests"),
 ]

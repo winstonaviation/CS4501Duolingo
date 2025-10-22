@@ -16,15 +16,15 @@
         <span class="sidebar-nav-icon">🏆</span>
         <span>LEADERBOARDS</span>
       </a>
-      <a href="#" class="sidebar-nav-item">
-        <span class="sidebar-nav-icon">📋</span>
+      <a href="{% url 'quests' %}" class="sidebar-nav-item">
+        <span class="sidebar-nav-icon">🎯</span>
         <span>QUESTS</span>
       </a>
       <a href="#" class="sidebar-nav-item">
         <span class="sidebar-nav-icon">🏪</span>
         <span>SHOP</span>
       </a>
-      <a href="#" class="sidebar-nav-item">
+      <a href="{% url 'user_profile' %}" class="sidebar-nav-item">
         <span class="sidebar-nav-icon">👤</span>
         <span>PROFILE</span>
       </a>
@@ -184,7 +184,7 @@
         <div class="sidebar-card">
           <div class="daily-quests-header">
             <h3>Daily Quests</h3>
-            <a href="#" class="view-all-link">View All</a>
+            <a href="{% url 'quests' %}" class="view-all-link">View All</a>
           </div>
           
           {% for user_quest in daily_quests %}
