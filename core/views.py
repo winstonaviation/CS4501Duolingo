@@ -187,17 +187,17 @@ def lesson_complete(request, lesson_id):
     exercises = list(lesson.exercises.all())
     profile = request.user.profile
 
-    # compute score = correct attempts on these exercises (latest per exercise)
-    latest = (
+    # compute score = first-try correctness (first attempt per exercise)
+    first_attempts = (
         Attempt.objects
         .filter(user=request.user, exercise__in=exercises)
-        .order_by("exercise_id", "-created_at")
+        .order_by("exercise_id", "created_at")  # oldest first
     )
-    latest_by_ex = {}
-    for a in latest:
-        if a.exercise_id not in latest_by_ex:
-            latest_by_ex[a.exercise_id] = a
-    score = sum(1 for a in latest_by_ex.values() if a.is_correct)
+    first_by_ex = {}
+    for a in first_attempts:
+        if a.exercise_id not in first_by_ex:
+            first_by_ex[a.exercise_id] = a
+    score = sum(1 for a in first_by_ex.values() if a.is_correct)
 
     lp, _ = LessonProgress.objects.get_or_create(user=request.user, lesson=lesson)
     lp.score = score
