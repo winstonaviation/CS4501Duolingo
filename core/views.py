@@ -24,7 +24,7 @@ def home(request):
         # Map learning language to course slug
         language_map = {
             'es': 'spanish-to-english',
-            'zh': 'zh-en-basics',
+            'zh': 'chinese-to-english',
             'fr': 'french-to-english',
         }
         course_slug = language_map.get(profile.learning_language)
