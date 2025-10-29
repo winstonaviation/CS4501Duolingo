@@ -23,7 +23,7 @@
 
   <!-- Exercise Prompt -->
   <div class="exercise-prompt">
-    {% if exercise.is_new_word %}
+    {% if exercise.is_new_word and not feedback %}
       <div class="new-word-badge">
         <span>✨</span>
         <span>NEW WORD</span>
@@ -66,20 +66,90 @@
     {% endif %}
   </div>
 
-  <!-- Feedback (shown after submission) -->
+  <!-- IMMEDIATE Feedback (shown after submission) -->
   {% if feedback %}
-    <div class="feedback {% if feedback.is_correct %}correct{% else %}incorrect{% endif %}">
-      <span class="feedback-icon">
+    <div class="feedback-banner" style="
+      padding: 24px;
+      border-radius: 16px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      animation: slideIn 0.3s ease-out;
+      {% if feedback.is_correct %}
+        background: linear-gradient(135deg, #d7ffb8 0%, #89e500 100%);
+        border: 3px solid var(--duo-green);
+        box-shadow: 0 8px 16px rgba(88, 204, 2, 0.3);
+      {% else %}
+        background: linear-gradient(135deg, #ffd2d2 0%, #ff6b6b 100%);
+        border: 3px solid var(--duo-red);
+        box-shadow: 0 8px 16px rgba(255, 75, 75, 0.3);
+      {% endif %}
+    ">
+      <span style="
+        font-size: 64px;
+        font-weight: 900;
+        line-height: 1;
+        {% if feedback.is_correct %}
+          color: var(--duo-green-dark);
+        {% else %}
+          color: #c70000;
+        {% endif %}
+      ">
         {% if feedback.is_correct %}✓{% else %}✗{% endif %}
       </span>
-      <div>
+      <div style="flex: 1;">
         {% if feedback.is_correct %}
-          <strong>Excellent!</strong> You got it right!
+          <div style="font-size: 28px; font-weight: 900; color: var(--duo-green-dark); margin-bottom: 8px;">
+            {% if feedback.first_try %}
+              Perfect! 🎉
+            {% else %}
+              Great job! ⭐
+            {% endif %}
+          </div>
+          <div style="font-size: 18px; color: #2d5016; font-weight: 600;">
+            {% if feedback.first_try %}
+              You got it right on the first try! +{{ feedback.xp_earned }} XP
+            {% else %}
+              You corrected your answer! +{{ feedback.xp_earned }} XP
+            {% endif %}
+          </div>
         {% else %}
-          <strong>Not quite.</strong> Correct answer: <em>{{ feedback.correct_answer }}</em>
+          <div style="font-size: 28px; font-weight: 900; color: #c70000; margin-bottom: 8px;">
+            {% if feedback.allow_retry %}
+              Not quite! 💭
+            {% else %}
+              Incorrect 😔
+            {% endif %}
+          </div>
+          <div style="font-size: 18px; color: #5c0000; font-weight: 600; margin-bottom: 8px;">
+            Correct answer: <strong style="background: white; padding: 4px 12px; border-radius: 8px; color: var(--duo-green);">{{ feedback.correct_answer }}</strong>
+          </div>
+          {% if feedback.allow_retry %}
+            <div style="font-size: 16px; color: #5c0000; font-weight: 600; padding: 12px; background: rgba(255,255,255,0.5); border-radius: 8px; margin-top: 8px;">
+              💡 <strong>Try again!</strong> You have one more chance to get it right.
+            </div>
+          {% else %}
+            <div style="font-size: 16px; color: #5c0000; font-weight: 600;">
+              Study this answer and let's move on to the next question.
+            </div>
+          {% endif %}
         {% endif %}
       </div>
     </div>
+
+    <style>
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
   {% endif %}
 
   <!-- Exercise Form -->
@@ -93,7 +163,7 @@
         <div class="visual-choices">
           {% for choice in exercise.choices.all %}
             <label class="visual-choice-card">
-              <input type="radio" name="choice" value="{{ choice.id }}" required>
+              <input type="radio" name="choice" value="{{ choice.id }}" required {% if feedback %}disabled{% endif %}>
               <div class="choice-image-container">
                 <img src="{{ choice.image.url }}" alt="{{ choice.text }}" style="width: 100%; height: 100%; object-fit: contain;">
               </div>
@@ -111,7 +181,7 @@
         <div class="exercise-choices">
           {% for choice in exercise.choices.all %}
             <label class="choice-btn">
-              <input type="radio" name="choice" value="{{ choice.id }}" required>
+              <input type="radio" name="choice" value="{{ choice.id }}" required {% if feedback %}disabled{% endif %}>
               <div class="choice-content">
                 {% if choice.text|length <= 3 %}
                   <!-- Emoji or short character -->
@@ -168,6 +238,7 @@
         class="answer-input"
         placeholder="Type what you hear..."
         required
+        {% if feedback and not feedback.allow_retry %}disabled{% endif %}
         autofocus
       >
     {% else %}
@@ -178,6 +249,7 @@
         class="answer-input"
         placeholder="Type your translation here..."
         required
+        {% if feedback and not feedback.allow_retry %}disabled{% endif %}
         autofocus
       >
     {% endif %}
@@ -204,30 +276,38 @@
       </button>
 
       <div style="display: flex; gap: 12px;">
-        {% if exercise.type == "MC" and not feedback %}
-          <button type="button" onclick="skip()" class="btn-gray btn">
-            Skip
-          </button>
-          <script>
-            function skip() {
-              if (confirm('Are you sure you want to skip this question?')) {
-                window.location.href = '{% url 'exercise_play' lesson.id index|add:'1' %}';
+        {% if not feedback %}
+          <!-- Before any submission -->
+          {% if exercise.type == "MC" %}
+            <button type="button" onclick="skip()" class="btn-gray btn">
+              Skip
+            </button>
+            <script>
+              function skip() {
+                if (confirm('Are you sure you want to skip this question?')) {
+                  window.location.href = '{% url 'exercise_play' lesson.id index|add:'1' %}';
+                }
               }
-            }
-          </script>
-        {% endif %}
-
-        <button type="submit" class="btn">
-          {% if feedback %}
-            {% if feedback.is_correct %}
-              Continue →
-            {% else %}
-              Got it
-            {% endif %}
-          {% else %}
-            Check
+            </script>
           {% endif %}
-        </button>
+          
+          <button type="submit" class="btn">
+            Check
+          </button>
+        {% elif show_continue %}
+          <!-- Show continue button (correct answer OR failed second attempt) -->
+          <button type="button" 
+                  onclick="window.location.href='{% url 'exercise_play' lesson.id index|add:'1' %}'"
+                  class="btn"
+                  style="{% if feedback.is_correct %}background: var(--duo-green);{% endif %}">
+            Continue →
+          </button>
+        {% else %}
+          <!-- Show try again button (wrong first attempt) -->
+          <button type="submit" class="btn" style="background: var(--duo-orange); box-shadow: 0 4px 0 #d97706;">
+            Try Again
+          </button>
+        {% endif %}
       </div>
     </div>
   </form>
@@ -235,6 +315,15 @@
   <!-- Progress indicator -->
   <div style="text-align: center; margin-top: 32px; color: #777; font-size: 14px; font-weight: 600;">
     Question {{ index }} of {{ total }}
+    {% if attempt_count > 0 %}
+      <span style="color: var(--duo-text-light);">
+        {% if attempt_count == 1 %}
+          • First attempt
+        {% else %}
+          • Second attempt
+        {% endif %}
+      </span>
+    {% endif %}
   </div>
 
   <!-- Keyboard shortcuts hint -->
@@ -249,13 +338,19 @@
 <!-- Keyboard shortcuts -->
 <script>
   document.addEventListener('keydown', function(e) {
-    // Enter to submit
-    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-      document.querySelector('form').submit();
+    // Enter to submit (but only if no feedback shown yet or retry allowed)
+    {% if not feedback or not show_continue %}
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.target.disabled) {
+      const form = document.querySelector('form');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn && !submitBtn.disabled) {
+        form.submit();
+      }
     }
+    {% endif %}
     
-    // Number keys for multiple choice
-    {% if exercise.type == "MC" %}
+    // Number keys for multiple choice (only if not showing feedback)
+    {% if exercise.type == "MC" and not feedback %}
     const num = parseInt(e.key);
     if (num >= 1 && num <= {{ exercise.choices.count }}) {
       const choices = document.querySelectorAll('input[name="choice"]');

@@ -167,6 +167,7 @@ class UserProfile(models.Model):
     xp = models.IntegerField(default=0)
     streak_days = models.IntegerField(default=0)
     last_active_date = models.DateField(null=True, blank=True)
+    last_heart_restore = models.DateTimeField(null=True, blank=True, help_text="Last time hearts were restored to maximum")
 
     def __str__(self):
         return f"{self.user} - Learning: {self.get_learning_language_display() if self.learning_language else 'Not selected'}"
@@ -178,8 +179,10 @@ class UserProfile(models.Model):
             self.save()
 
     def restore_hearts(self):
-        """Restore hearts to maximum"""
+        """Restore hearts to maximum and update restore timestamp"""
+        from datetime import datetime
         self.hearts = self.max_hearts
+        self.last_heart_restore = datetime.now()
         self.save()
 
     def add_xp(self, amount):
