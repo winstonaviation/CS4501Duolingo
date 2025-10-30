@@ -449,3 +449,64 @@ def quests(request):
         'hours_remaining': hours_remaining,
         'minutes_remaining': minutes_remaining,
     })
+
+# Add these new views to your existing core/views.py file
+
+@login_required
+def leaderboards(request):
+    """Display leaderboards page"""
+    profile = request.user.profile
+    
+    # Restore hearts if needed
+    restore_hearts_if_needed(profile)
+    
+    # Check if leaderboards are unlocked (need to complete a certain number of lessons)
+    completed_lessons_count = LessonProgress.objects.filter(
+        user=request.user,
+        completed=True
+    ).count()
+    
+    lessons_needed = max(0, 10 - completed_lessons_count)
+    is_unlocked = completed_lessons_count >= 10
+    
+    return render(request, 'leaderboards.html', {
+        'profile': profile,
+        'is_unlocked': is_unlocked,
+        'lessons_needed': lessons_needed,
+        'completed_lessons_count': completed_lessons_count,
+    })
+
+@login_required
+def shop(request):
+    """Display shop page with purchasable items"""
+    profile = request.user.profile
+    
+    # Restore hearts if needed
+    restore_hearts_if_needed(profile)
+    
+    # Handle purchase requests
+    if request.method == 'POST':
+        item_type = request.POST.get('item_type')
+        
+        if item_type == 'refill_hearts':
+            cost = 350
+            if profile.gems >= cost:
+                profile.gems -= cost
+                profile.restore_hearts()
+                return redirect('shop')
+        elif item_type == 'streak_freeze':
+            cost = 200
+            if profile.gems >= cost:
+                # TODO: Implement streak freeze functionality
+                profile.gems -= cost
+                profile.save()
+                return redirect('shop')
+    
+    # Get or create today's daily quests for the sidebar
+    today = date.today()
+    daily_quests = UserDailyQuest.objects.filter(user=request.user, date_assigned=today)[:2]
+    
+    return render(request, 'shop.html', {
+        'profile': profile,
+        'daily_quests': daily_quests,
+    })

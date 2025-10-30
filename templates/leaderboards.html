@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Leaderboards · Multilingo{% endblock %}
+
+{% block content %}
+<style>
+    .leaderboards-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr 380px;
+        gap: 24px;
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 24px;
+        min-height: calc(100vh - 80px);
+    }
+
+    .leaderboards-main {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 24px;
+    }
+
+    .medals-display {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 40px;
+        align-items: center;
+    }
+
+    .medal {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        position: relative;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .medal.bronze {
+        background: linear-gradient(135deg, #cd7f32 0%, #8b5a2b 100%);
+    }
+
+    .medal.gold {
+        background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+        transform: scale(1.2);
+        z-index: 1;
+    }
+
+    .medal.silver {
+        background: linear-gradient(135deg, #c0c0c0 0%, #808080 100%);
+    }
+
+    .leaderboards-locked-content {
+        text-align: center;
+        max-width: 500px;
+    }
+
+    .leaderboards-locked-content h1 {
+        font-size: 40px;
+        font-weight: 900;
+        color: var(--duo-text);
+        margin-bottom: 16px;
+    }
+
+    .leaderboards-locked-content p {
+        font-size: 18px;
+        color: var(--duo-text-light);
+        margin-bottom: 32px;
+        line-height: 1.6;
+    }
+
+    .lessons-progress {
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 32px;
+        width: 100%;
+    }
+
+    .lessons-progress-text {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--duo-text);
+        margin-bottom: 12px;
+        text-align: center;
+    }
+
+    .lessons-progress-bar {
+        width: 100%;
+        height: 16px;
+        background: #f0f0f0;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+
+    .lessons-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #1cb0f6 0%, #0e8fd3 100%);
+        border-radius: 8px;
+        transition: width 0.3s ease;
+    }
+
+    .lessons-count-text {
+        font-size: 14px;
+        color: var(--duo-text-light);
+        text-align: center;
+    }
+
+    .placeholder-leaderboard {
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 16px;
+        padding: 32px;
+        width: 100%;
+        opacity: 0.5;
+    }
+
+    .placeholder-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        border-bottom: 1px solid var(--duo-gray);
+    }
+
+    .placeholder-row:last-child {
+        border-bottom: none;
+    }
+
+    .placeholder-rank {
+        width: 32px;
+        height: 32px;
+        background: #e5e5e5;
+        border-radius: 50%;
+    }
+
+    .placeholder-avatar {
+        width: 48px;
+        height: 48px;
+        background: #e5e5e5;
+        border-radius: 50%;
+    }
+
+    .placeholder-info {
+        flex: 1;
+    }
+
+    .placeholder-bar {
+        height: 16px;
+        background: #e5e5e5;
+        border-radius: 8px;
+        margin-bottom: 8px;
+    }
+
+    .placeholder-bar.short {
+        width: 60%;
+    }
+
+    .placeholder-bar.shorter {
+        width: 40%;
+    }
+
+    .placeholder-score {
+        width: 60px;
+        height: 24px;
+        background: #e5e5e5;
+        border-radius: 8px;
+    }
+
+    @media (max-width: 1200px) {
+        .leaderboards-layout {
+            grid-template-columns: 1fr 380px;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .leaderboards-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="leaderboards-layout">
+    <!-- Left Sidebar -->
+    <aside class="left-sidebar">
+        <nav class="sidebar-nav">
+            <a href="{% url 'home' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🏠</span>
+                <span>LEARN</span>
+            </a>
+            <!--
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">💪</span>
+                <span>PRACTICE</span>
+            </a>
+            -->
+            <a href="{% url 'leaderboards' %}" class="sidebar-nav-item active">
+                <span class="sidebar-nav-icon">🏆</span>
+                <span>LEADERBOARDS</span>
+            </a>
+            <a href="{% url 'quests' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🎯</span>
+                <span>QUESTS</span>
+            </a>
+            <a href="{% url 'shop' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🛍️</span>
+                <span>SHOP</span>
+            </a>
+            <a href="{% url 'user_profile' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">👤</span>
+                <span>PROFILE</span>
+            </a>
+            <!--
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">⋯</span>
+                <span>MORE</span>
+            </a>
+            -->
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="leaderboards-main">
+        {% if not is_unlocked %}
+            <!-- Medals Display -->
+            <div class="medals-display">
+                <div class="medal bronze">🥉</div>
+                <div class="medal gold">🥇</div>
+                <div class="medal silver">🥈</div>
+            </div>
+
+            <!-- Locked Content -->
+            <div class="leaderboards-locked-content">
+                <h1>Unlock Leaderboards!</h1>
+                <p>Complete {{ lessons_needed }} more lesson{{ lessons_needed|pluralize }} to start competing</p>
+
+                <!-- Progress -->
+                <div class="lessons-progress">
+                    <div class="lessons-progress-text">
+                        Lesson Progress
+                    </div>
+                    <div class="lessons-progress-bar">
+                        <div class="lessons-progress-fill" style="width: {% widthratio completed_lessons_count 10 100 %}%;"></div>
+                    </div>
+                    <div class="lessons-count-text">
+                        {{ completed_lessons_count }} / 10 lessons completed
+                    </div>
+                </div>
+
+                <a href="{% url 'home' %}" class="btn" style="padding: 16px 48px; font-size: 16px;">
+                    START A LESSON
+                </a>
+
+                <!-- Placeholder Leaderboard -->
+                <div class="placeholder-leaderboard" style="margin-top: 40px;">
+                    {% for i in "12345"|make_list %}
+                        <div class="placeholder-row">
+                            <div class="placeholder-rank"></div>
+                            <div class="placeholder-avatar"></div>
+                            <div class="placeholder-info">
+                                <div class="placeholder-bar {% if forloop.counter|divisibleby:2 %}short{% else %}shorter{% endif %}"></div>
+                            </div>
+                            <div class="placeholder-score"></div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% else %}
+            <!-- TODO: Implement actual leaderboard view when unlocked -->
+            <div style="text-align: center;">
+                <h1 style="font-size: 40px; margin-bottom: 16px;">🏆 Leaderboards</h1>
+                <p style="font-size: 18px; color: var(--duo-text-light);">
+                    Leaderboard functionality coming soon!
+                </p>
+            </div>
+        {% endif %}
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside class="right-sidebar">
+        <!-- User Stats -->
+        <div class="user-stats-bar">
+            <div class="stat-item">
+                <span class="stat-icon">🔥</span>
+                <span class="stat-value">{{ profile.streak_days }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">💎</span>
+                <span class="stat-value">{{ profile.gems }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">❤️</span>
+                <span class="stat-value">{{ profile.hearts }}</span>
+            </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="sidebar-card">
+            <h3>What are Leaderboards?</h3>
+            <div style="margin-top: 16px; font-size: 14px; color: var(--duo-text-light); line-height: 1.6;">
+                <p style="margin-bottom: 12px;">
+                    <strong style="color: var(--duo-text);">Do lessons. Earn XP. Compete.</strong>
+                </p>
+                <p>
+                    Earn XP through lessons, then compete with players in a weekly leaderboard.
+                </p>
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <div style="font-size: 80px; margin-bottom: 12px;">🐬</div>
+                <p style="font-size: 12px; color: var(--duo-text-light);">
+                    Join the competition and climb the ranks!
+                </p>
+            </div>
+        </div>
+
+        <!-- Motivational Card -->
+        <div class="sidebar-card" style="background: linear-gradient(135deg, #1cb0f6 0%, #0e8fd3 100%); color: white; border: none;">
+            <h3 style="color: white;">Keep Learning! 🚀</h3>
+            <p style="margin-top: 12px; font-size: 14px; opacity: 0.95; line-height: 1.6;">
+                {% if not is_unlocked %}
+                    You're {{ lessons_needed }} lesson{{ lessons_needed|pluralize }} away from competing with learners worldwide!
+                {% else %}
+                    Great job unlocking leaderboards! Keep earning XP to climb the ranks.
+                {% endif %}
+            </p>
+        </div>
+    </aside>
+</div>
+{% endblock %}
