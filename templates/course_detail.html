@@ -175,11 +175,13 @@
       -->
 
       <!-- Unlock Leaderboards -->
+      {% if not is_unlocked %}
       <div class="sidebar-card unlock-card">
         <div class="unlock-icon">🔒</div>
         <h3>Unlock Leaderboards!</h3>
-        <p>Complete 10 more lessons to start competing</p>
+        <p>Complete {{lessons_needed}} more lessons to start competing</p>
       </div>
+      {% endif %}
 
       <!-- Daily Quests -->
       {% if daily_quests %}

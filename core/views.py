@@ -115,6 +115,15 @@ def course_detail(request, slug):
                     date_assigned=today
                 )
             daily_quests = UserDailyQuest.objects.filter(user=request.user, date_assigned=today)
+        
+        # Check if leaderboards are unlocked (need to complete a certain number of lessons)
+        completed_lessons_count = LessonProgress.objects.filter(
+            user=request.user,
+            completed=True
+        ).count()
+        
+        lessons_needed = max(0, 10 - completed_lessons_count)
+        is_unlocked = completed_lessons_count >= 10
 
         return render(request, "course_detail.html", {
             "course": course,
@@ -122,6 +131,8 @@ def course_detail(request, slug):
             "progress_map": progress_map,
             "profile": profile,
             "daily_quests": daily_quests,
+            "lessons_needed": lessons_needed,
+            "is_unlocked": is_unlocked,
         })
 
     return render(request, "course_detail.html", {"course": course, "sections": sections, "progress_map": {}})
