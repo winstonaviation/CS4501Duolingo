@@ -165,8 +165,12 @@ def exercise_play(request, lesson_id, index: int):
     # Restore hearts if needed
     restore_hearts_if_needed(profile)
 
-    # Check if user has hearts
-    if profile.hearts <= 0:
+    # Check if this lesson is already completed (practice mode)
+    lesson_progress = LessonProgress.objects.filter(user=request.user, lesson=lesson, completed=True).first()
+    is_practice_mode = lesson_progress is not None
+
+    # In practice mode, don't check hearts
+    if not is_practice_mode and profile.hearts <= 0:
         return render(request, "no_hearts.html", {"profile": profile})
 
     if not exercises:
@@ -189,7 +193,14 @@ def exercise_play(request, lesson_id, index: int):
     exercise_key = str(exercise.id)
     
     # Get attempt count for this exercise (0 = never attempted, 1 = first attempt made, 2 = second attempt made)
-    attempt_count = request.session['lesson_attempts'][lesson_key].get(exercise_key, 0)
+    # Note: the value might be a string status ('perfect', 'corrected', 'failed') if already completed
+    attempt_value = request.session['lesson_attempts'][lesson_key].get(exercise_key, 0)
+    
+    # If it's a string status (already completed), reset to 0 to allow re-doing the exercise
+    if isinstance(attempt_value, str):
+        attempt_count = 0
+    else:
+        attempt_count = int(attempt_value)
     
     feedback = None
     show_continue = False
@@ -224,53 +235,66 @@ def exercise_play(request, lesson_id, index: int):
 
         if is_correct:
             # Correct answer!
-            if attempt_count == 1:
-                # First try - perfect!
-                profile.add_xp(10)
-                request.session['lesson_attempts'][lesson_key][exercise_key] = 'perfect'
+            if not is_practice_mode:
+                # Only award XP and update quests if NOT in practice mode
+                if attempt_count == 1:
+                    # First try - perfect!
+                    profile.add_xp(10)
+                    request.session['lesson_attempts'][lesson_key][exercise_key] = 'perfect'
+                else:
+                    # Second try - corrected
+                    profile.add_xp(5)  # Half XP for retry
+                    request.session['lesson_attempts'][lesson_key][exercise_key] = 'corrected'
+                
+                request.session.modified = True
+                
+                # Update XP quest progress
+                today = date.today()
+                xp_quest = UserDailyQuest.objects.filter(
+                    user=request.user,
+                    quest__quest_type=DailyQuest.EARN_XP,
+                    date_assigned=today
+                ).first()
+                if xp_quest:
+                    xp_reward = 10 if attempt_count == 1 else 5
+                    xp_quest.update_progress(xp_reward)
+                
+                # Update streak
+                profile.update_streak()
+                
+                xp_earned = 10 if attempt_count == 1 else 5
             else:
-                # Second try - corrected
-                profile.add_xp(5)  # Half XP for retry
-                request.session['lesson_attempts'][lesson_key][exercise_key] = 'corrected'
-            
-            request.session.modified = True
-            
-            # Update XP quest progress
-            today = date.today()
-            xp_quest = UserDailyQuest.objects.filter(
-                user=request.user,
-                quest__quest_type=DailyQuest.EARN_XP,
-                date_assigned=today
-            ).first()
-            if xp_quest:
-                xp_reward = 10 if attempt_count == 1 else 5
-                xp_quest.update_progress(xp_reward)
-            
-            # Update streak
-            profile.update_streak()
+                # Practice mode - just mark as complete in session
+                request.session['lesson_attempts'][lesson_key][exercise_key] = 'perfect' if attempt_count == 1 else 'corrected'
+                request.session.modified = True
+                xp_earned = 0
             
             feedback = {
                 "is_correct": True,
                 "correct_answer": exercise.answer_text,
                 "first_try": attempt_count == 1,
-                "xp_earned": 10 if attempt_count == 1 else 5
+                "xp_earned": xp_earned,
+                "is_practice": is_practice_mode
             }
             show_continue = True
         else:
             # Wrong answer
             if attempt_count == 1:
-                # First attempt wrong - lose heart, allow retry
-                profile.lose_heart()
+                # First attempt wrong - lose heart (unless practice mode), allow retry
+                if not is_practice_mode:
+                    profile.lose_heart()
                 feedback = {
                     "is_correct": False,
                     "correct_answer": exercise.answer_text,
                     "allow_retry": True,
-                    "first_try": True
+                    "first_try": True,
+                    "is_practice": is_practice_mode
                 }
                 show_continue = False
             else:
                 # Second attempt also wrong - mark as failed, move on
-                profile.lose_heart()
+                if not is_practice_mode:
+                    profile.lose_heart()
                 request.session['lesson_attempts'][lesson_key][exercise_key] = 'failed'
                 request.session.modified = True
                 
@@ -278,7 +302,8 @@ def exercise_play(request, lesson_id, index: int):
                     "is_correct": False,
                     "correct_answer": exercise.answer_text,
                     "allow_retry": False,
-                    "first_try": False
+                    "first_try": False,
+                    "is_practice": is_practice_mode
                 }
                 show_continue = True
 
@@ -291,6 +316,7 @@ def exercise_play(request, lesson_id, index: int):
         "show_continue": show_continue,
         "attempt_count": attempt_count,
         "profile": profile,
+        "is_practice_mode": is_practice_mode,
     })
 
 @login_required
@@ -301,6 +327,10 @@ def lesson_complete(request, lesson_id):
 
     # Restore hearts if needed
     restore_hearts_if_needed(profile)
+
+    # Check if this was practice mode
+    lesson_progress = LessonProgress.objects.filter(user=request.user, lesson=lesson, completed=True).first()
+    is_practice_mode = lesson_progress is not None
 
     # Get attempt tracking from session
     lesson_key = str(lesson_id)
@@ -317,46 +347,54 @@ def lesson_complete(request, lesson_id):
     # Calculate score
     score = total_correct
 
-    lp, _ = LessonProgress.objects.get_or_create(user=request.user, lesson=lesson)
-    lp.score = score
-    lp.completed = True
-    lp.last_seen = timezone.now()
-    lp.save()
+    # Only update progress and award XP if NOT in practice mode
+    if not is_practice_mode:
+        lp, _ = LessonProgress.objects.get_or_create(user=request.user, lesson=lesson)
+        lp.score = score
+        lp.completed = True
+        lp.last_seen = timezone.now()
+        lp.save()
 
-    # Award completion bonus XP
-    completion_xp = 20
-    profile.add_xp(completion_xp)
+        # Award completion bonus XP
+        completion_xp = 20
+        profile.add_xp(completion_xp)
 
-    # Update daily quest progress
-    today = date.today()
-    
-    # Update XP quest
-    xp_quest = UserDailyQuest.objects.filter(
-        user=request.user,
-        quest__quest_type=DailyQuest.EARN_XP,
-        date_assigned=today
-    ).first()
-    if xp_quest:
-        xp_quest.update_progress(completion_xp)
-    
-    # Update lessons quest
-    lesson_quest = UserDailyQuest.objects.filter(
-        user=request.user,
-        quest__quest_type=DailyQuest.COMPLETE_LESSONS,
-        date_assigned=today
-    ).first()
-    if lesson_quest:
-        lesson_quest.update_progress(1)
-
-    # Check for perfect lesson (all correct on first try)
-    if perfect_count == total_exercises:
-        perfect_quest = UserDailyQuest.objects.filter(
+        # Update daily quest progress
+        today = date.today()
+        
+        # Update XP quest
+        xp_quest = UserDailyQuest.objects.filter(
             user=request.user,
-            quest__quest_type=DailyQuest.PERFECT_LESSON,
+            quest__quest_type=DailyQuest.EARN_XP,
             date_assigned=today
         ).first()
-        if perfect_quest:
-            perfect_quest.update_progress(1)
+        if xp_quest:
+            xp_quest.update_progress(completion_xp)
+        
+        # Update lessons quest
+        lesson_quest = UserDailyQuest.objects.filter(
+            user=request.user,
+            quest__quest_type=DailyQuest.COMPLETE_LESSONS,
+            date_assigned=today
+        ).first()
+        if lesson_quest:
+            lesson_quest.update_progress(1)
+
+        # Check for perfect lesson (all correct on first try)
+        if perfect_count == total_exercises:
+            perfect_quest = UserDailyQuest.objects.filter(
+                user=request.user,
+                quest__quest_type=DailyQuest.PERFECT_LESSON,
+                date_assigned=today
+            ).first()
+            if perfect_quest:
+                perfect_quest.update_progress(1)
+    else:
+        # Practice mode - just update last_seen
+        if lesson_progress:
+            lesson_progress.last_seen = timezone.now()
+            lesson_progress.save()
+        completion_xp = 0
     
     # Clear session data for this lesson
     if lesson_key in request.session.get('lesson_attempts', {}):
@@ -372,6 +410,7 @@ def lesson_complete(request, lesson_id):
         "failed_count": failed_count,
         "profile": profile,
         "completion_xp": completion_xp,
+        "is_practice_mode": is_practice_mode,
     })
 
 @login_required

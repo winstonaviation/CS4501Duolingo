@@ -76,6 +76,7 @@ class Exercise(models.Model):
     MATCH_PAIRS = "MP"
     LISTEN = "LS"
     SPEAK = "SP"
+    LISTEN_CONSTRUCT = "LC"
 
     TYPE_CHOICES = [
         (MULTIPLE_CHOICE, "Multiple Choice"),
@@ -83,6 +84,7 @@ class Exercise(models.Model):
         (MATCH_PAIRS, "Match Pairs"),
         (LISTEN, "Listen"),
         (SPEAK, "Speak"),
+        (LISTEN_CONSTRUCT, 'Listen & Construct')
     ]
 
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="exercises")

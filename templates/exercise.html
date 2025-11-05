@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ lesson.title }} - Exercise {{ index }} · Duolingo{% endblock %}
+{% block title %}{{ lesson.title }} - Exercise {{ index }} · Multilingo{% endblock %}
 {% block content %}
 <div class="exercise-container">
   <!-- Progress Bar and Hearts -->
@@ -41,6 +41,8 @@
         Write this in English
       {% elif exercise.type == "LS" %}
         What do you hear?
+      {% elif exercise.type == "LC" %}
+        Tap what you hear
       {% elif exercise.type == "SP" %}
         Say this sentence
       {% else %}
@@ -50,17 +52,30 @@
 
     {% if exercise.type != "MC" or not exercise.choices.first.image %}
       <div class="question">
-        {{ exercise.prompt }}
-        {% if exercise.audio_file %}
-          <button onclick="playAudio()" style="background: none; border: none; cursor: pointer; font-size: 32px; margin-left: 16px;">
-            🔊
-          </button>
-          <audio id="exercise-audio" src="{{ exercise.audio_file.url }}"></audio>
-          <script>
-            function playAudio() {
-              document.getElementById('exercise-audio').play();
-            }
-          </script>
+        {% if exercise.type == "LS" or exercise.type == "LC" %}
+          <!-- Audio playback for listening exercises -->
+          <div style="text-align: center; margin: 32px 0;">
+            <button type="button" onclick="playExerciseAudio()" class="audio-play-btn">
+             <span class="audio-icon">🔊</span>
+              <span class="audio-text">Play Audio</span>
+           </button>
+            <button type="button" onclick="playExerciseAudioSlow()" class="audio-play-btn audio-play-btn-slow" style="margin-left: 12px;">
+              <span class="audio-icon">🐢</span>
+              <span class="audio-text">Slow</span>
+           </button>
+          </div>
+          {% if exercise.audio_file %}
+            <audio id="exercise-audio" src="{{ exercise.audio_file.url }}"></audio>
+            <audio id="exercise-audio-slow" src="{{ exercise.audio_file.url }}"></audio>
+          {% endif %}
+        {% else %}
+          {{ exercise.prompt }}
+          {% if exercise.audio_file %}
+           <button onclick="playExerciseAudio()" style="background: none; border: none; cursor: pointer; font-size: 32px; margin-left: 16px;">
+             🔊
+           </button>
+            <audio id="exercise-audio" src="{{ exercise.audio_file.url }}"></audio>
+          {% endif %}
         {% endif %}
       </div>
     {% endif %}
@@ -158,18 +173,34 @@
 
     {% if exercise.type == "MC" %}
       <!-- Multiple Choice -->
-      {% if feedback and feedback.is_correct %}
-        <!-- Show correct answer highlighted when correct -->
+      {% if feedback %}
+        <!-- FEEDBACK STATE: Show answers with highlighting -->
         {% if exercise.choices.first.image %}
           <div class="visual-choices">
             {% for choice in exercise.choices.all %}
-              <div class="visual-choice-card {% if choice.is_correct %}correct-choice{% endif %}" style="pointer-events: none; {% if choice.is_correct %}border-color: var(--duo-green); border-width: 3px; background: #f0fdf4;{% else %}opacity: 0.5;{% endif %}">
+              <div class="visual-choice-card 
+                {% if choice.is_correct %}correct-choice{% endif %}
+                {% if feedback.user_choice_id == choice.id and not choice.is_correct %}wrong-choice{% endif %}"
+                style="pointer-events: none;
+                {% if choice.is_correct %}
+                  border-color: var(--duo-green); 
+                  border-width: 3px; 
+                  background: #f0fdf4;
+                {% elif feedback.user_choice_id == choice.id %}
+                  border-color: var(--duo-red); 
+                  border-width: 3px; 
+                  background: #fef2f2;
+                {% else %}
+                  opacity: 0.5;
+                {% endif %}">
                 <div class="choice-image-container">
                   <img src="{{ choice.image.url }}" alt="{{ choice.text }}" style="width: 100%; height: 100%; object-fit: contain;">
                 </div>
                 <div class="choice-text">{{ choice.text }}</div>
                 {% if choice.is_correct %}
                   <div style="position: absolute; top: 12px; right: 12px; background: var(--duo-green); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900;">✓</div>
+                {% elif feedback.user_choice_id == choice.id %}
+                  <div style="position: absolute; top: 12px; right: 12px; background: var(--duo-red); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900;">✗</div>
                 {% endif %}
               </div>
             {% endfor %}
@@ -177,40 +208,21 @@
         {% else %}
           <div class="exercise-choices">
             {% for choice in exercise.choices.all %}
-              <div class="choice-btn {% if choice.is_correct %}correct-choice{% endif %}" style="pointer-events: none; {% if choice.is_correct %}border-color: var(--duo-green); border-width: 3px; background: #f0fdf4;{% else %}opacity: 0.5;{% endif %}">
-                <div class="choice-content">
-                  {% if choice.text|length <= 3 %}
-                    <div class="choice-image">{{ choice.text }}</div>
-                  {% endif %}
-                  <div class="choice-text">{{ choice.text }}</div>
-                  {% if choice.is_correct %}
-                    <div style="margin-left: auto; color: var(--duo-green); font-size: 24px; font-weight: 900;">✓</div>
-                  {% endif %}
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% elif feedback and not feedback.allow_retry %}
-        <!-- Show correct answer highlighted when failed second attempt -->
-        {% if exercise.choices.first.image %}
-          <div class="visual-choices">
-            {% for choice in exercise.choices.all %}
-              <div class="visual-choice-card {% if choice.is_correct %}correct-choice{% endif %}" style="pointer-events: none; {% if choice.is_correct %}border-color: var(--duo-green); border-width: 3px; background: #f0fdf4;{% else %}opacity: 0.5;{% endif %}">
-                <div class="choice-image-container">
-                  <img src="{{ choice.image.url }}" alt="{{ choice.text }}" style="width: 100%; height: 100%; object-fit: contain;">
-                </div>
-                <div class="choice-text">{{ choice.text }}</div>
+              <div class="choice-btn 
+                {% if choice.is_correct %}correct-choice{% endif %}
+                {% if feedback.user_choice_id == choice.id and not choice.is_correct %}wrong-choice{% endif %}"
+                style="pointer-events: none;
                 {% if choice.is_correct %}
-                  <div style="position: absolute; top: 12px; right: 12px; background: var(--duo-green); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900;">✓</div>
-                {% endif %}
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <div class="exercise-choices">
-            {% for choice in exercise.choices.all %}
-              <div class="choice-btn {% if choice.is_correct %}correct-choice{% endif %}" style="pointer-events: none; {% if choice.is_correct %}border-color: var(--duo-green); border-width: 3px; background: #f0fdf4;{% else %}opacity: 0.5;{% endif %}">
+                  border-color: var(--duo-green); 
+                  border-width: 3px; 
+                  background: #f0fdf4;
+                {% elif feedback.user_choice_id == choice.id %}
+                  border-color: var(--duo-red); 
+                  border-width: 3px; 
+                  background: #fef2f2;
+                {% else %}
+                  opacity: 0.5;
+                {% endif %}">
                 <div class="choice-content">
                   {% if choice.text|length <= 3 %}
                     <div class="choice-image">{{ choice.text }}</div>
@@ -218,6 +230,8 @@
                   <div class="choice-text">{{ choice.text }}</div>
                   {% if choice.is_correct %}
                     <div style="margin-left: auto; color: var(--duo-green); font-size: 24px; font-weight: 900;">✓</div>
+                  {% elif feedback.user_choice_id == choice.id %}
+                    <div style="margin-left: auto; color: var(--duo-red); font-size: 24px; font-weight: 900;">✗</div>
                   {% endif %}
                 </div>
               </div>
@@ -225,7 +239,7 @@
           </div>
         {% endif %}
       {% else %}
-        <!-- Normal state - allow selection -->
+        <!-- NORMAL STATE: Allow selection -->
         {% if exercise.choices.first.image %}
           <!-- Visual Multiple Choice (with images) -->
           <div class="visual-choices">
@@ -282,30 +296,34 @@
           </div>
         {% endif %}
       {% endif %}
+
+    {% elif exercise.type == "LC" %}
+      <!-- Listen & Construct (Word Bank) -->
+      <div class="word-bank-container">
+        <div class="constructed-sentence" id="constructed-sentence">
+          <!-- Selected words will appear here -->
+        </div>
+         
+        <div class="word-bank" id="word-bank">
+          {% for choice in exercise.choices.all %}
+            <button type="button" class="word-bank-btn" data-word="{{ choice.text }}" onclick="addWord(this)">
+              {{ choice.text }}
+            </button>
+          {% endfor %}
+        </div>
+         
+        <!-- Hidden input to store the constructed answer -->
+        <input type="hidden" name="answer" id="constructed-answer" required>
+      </div>
+
     {% elif exercise.type == "LS" %}
       <!-- Listen Exercise -->
-      <div style="text-align: center; margin-bottom: 32px;">
-        <button type="button" onclick="playAudio()" class="btn" style="font-size: 48px; padding: 32px;">
-          🔊
-        </button>
-        {% if exercise.audio_file %}
-          <audio id="exercise-audio" src="{{ exercise.audio_file.url }}"></audio>
-          <script>
-            function playAudio() {
-              document.getElementById('exercise-audio').play();
-            }
-            // Auto-play on load
-            window.addEventListener('load', function() {
-              document.getElementById('exercise-audio').play();
-            });
-          </script>
-        {% endif %}
-      </div>
       {% if feedback and feedback.is_correct %}
         <!-- Show correct answer in input when correct -->
         <input
           type="text"
           class="answer-input"
+          id="answer-input"
           value="{{ exercise.answer_text }}"
           disabled
           style="background: #f0fdf4; border-color: var(--duo-green); color: var(--duo-green-dark);"
@@ -315,6 +333,7 @@
         <input
           type="text"
           class="answer-input"
+          id="answer-input"
           value="{{ exercise.answer_text }}"
           disabled
           style="background: #f0fdf4; border-color: var(--duo-green); color: var(--duo-green-dark);"
@@ -325,18 +344,34 @@
           type="text"
           name="answer"
           class="answer-input"
+          id="answer-input"
           placeholder="Type what you hear..."
+          {% if feedback and not feedback.is_correct and feedback.allow_retry %}value="{{ feedback.user_answer }}"{% endif %}
           required
           autofocus
         >
+        <!-- Accented Characters Keyboard -->
+        <div class="accent-keyboard">
+          <button type="button" class="accent-btn" onclick="insertChar('á')">á</button>
+          <button type="button" class="accent-btn" onclick="insertChar('é')">é</button>
+          <button type="button" class="accent-btn" onclick="insertChar('í')">í</button>
+          <button type="button" class="accent-btn" onclick="insertChar('ó')">ó</button>
+          <button type="button" class="accent-btn" onclick="insertChar('ú')">ú</button>
+          <button type="button" class="accent-btn" onclick="insertChar('ñ')">ñ</button>
+          <button type="button" class="accent-btn" onclick="insertChar('ü')">ü</button>
+          <button type="button" class="accent-btn" onclick="insertChar('¿')">¿</button>
+          <button type="button" class="accent-btn" onclick="insertChar('¡')">¡</button>
+        </div>
       {% endif %}
+
     {% else %}
-      <!-- Translation Input -->
+      <!-- Translation Input (TR and other types) -->
       {% if feedback and feedback.is_correct %}
         <!-- Show correct answer in input when correct -->
         <input
           type="text"
           class="answer-input"
+          id="answer-input"
           value="{{ exercise.answer_text }}"
           disabled
           style="background: #f0fdf4; border-color: var(--duo-green); color: var(--duo-green-dark);"
@@ -346,6 +381,7 @@
         <input
           type="text"
           class="answer-input"
+          id="answer-input"
           value="{{ exercise.answer_text }}"
           disabled
           style="background: #f0fdf4; border-color: var(--duo-green); color: var(--duo-green-dark);"
@@ -356,10 +392,24 @@
           type="text"
           name="answer"
           class="answer-input"
+          id="answer-input"
           placeholder="Type your translation here..."
+          {% if feedback and not feedback.is_correct and feedback.allow_retry %}value="{{ feedback.user_answer }}"{% endif %}
           required
           autofocus
         >
+        <!-- Accented Characters Keyboard -->
+        <div class="accent-keyboard">
+          <button type="button" class="accent-btn" onclick="insertChar('á')">á</button>
+          <button type="button" class="accent-btn" onclick="insertChar('é')">é</button>
+          <button type="button" class="accent-btn" onclick="insertChar('í')">í</button>
+          <button type="button" class="accent-btn" onclick="insertChar('ó')">ó</button>
+          <button type="button" class="accent-btn" onclick="insertChar('ú')">ú</button>
+          <button type="button" class="accent-btn" onclick="insertChar('ñ')">ñ</button>
+          <button type="button" class="accent-btn" onclick="insertChar('ü')">ü</button>
+          <button type="button" class="accent-btn" onclick="insertChar('¿')">¿</button>
+          <button type="button" class="accent-btn" onclick="insertChar('¡')">¡</button>
+        </div>
       {% endif %}
     {% endif %}
 
@@ -388,22 +438,15 @@
         {% if not feedback %}
           <!-- Before any submission -->
           {% if exercise.type == "MC" %}
-            <button type="button" onclick="skip()" class="btn-gray btn">
+            <button type="button" onclick="skipQuestion()" class="btn-gray btn">
               Skip
             </button>
-            <script>
-              function skip() {
-                if (confirm('Are you sure you want to skip this question?')) {
-                  window.location.href = '{% url 'exercise_play' lesson.id index|add:'1' %}';
-                }
-              }
-            </script>
           {% endif %}
           
           <button type="submit" class="btn">
             Check
           </button>
-        {% elif show_continue %}
+        {% elif feedback.is_correct or not feedback.allow_retry %}
           <!-- Show continue button (correct answer OR failed second attempt) -->
           <button type="button" 
                   onclick="window.location.href='{% url 'exercise_play' lesson.id index|add:'1' %}'"
@@ -444,18 +487,126 @@
   </div>
 </div>
 
+<!-- Audio playback scripts -->
+<script>
+  function playExerciseAudio() {
+    const audio = document.getElementById('exercise-audio');
+    if (audio) {
+      audio.playbackRate = 1.0;
+      audio.play();
+    }
+  }
+
+  function playExerciseAudioSlow() {
+    const audio = document.getElementById('exercise-audio-slow');
+    if (audio) {
+      audio.playbackRate = 0.75;
+      audio.play();
+    }
+  }
+
+  function skipQuestion() {
+    if (confirm('Are you sure you want to skip this question?')) {
+      window.location.href = '{% url 'exercise_play' lesson.id index|add:'1' %}';
+    }
+  }
+
+  // Insert accented character at cursor position
+  function insertChar(char) {
+    const input = document.getElementById('answer-input');
+    if (!input) return;
+    
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const text = input.value;
+    
+    // Insert character at cursor position
+    input.value = text.substring(0, start) + char + text.substring(end);
+    
+    // Move cursor after inserted character
+    input.selectionStart = input.selectionEnd = start + 1;
+    
+    // Focus back on input
+    input.focus();
+  }
+</script>
+
+<!-- Word Bank functionality for Listen & Construct -->
+{% if exercise.type == "LC" %}
+<script>
+  function addWord(button) {
+    const word = button.getAttribute('data-word');
+    const constructedSentence = document.getElementById('constructed-sentence');
+    
+    // Create word element
+    const wordElement = document.createElement('span');
+    wordElement.className = 'constructed-word';
+    wordElement.textContent = word;
+    wordElement.onclick = function() {
+      removeWord(this, button);
+    };
+    
+    // Add to constructed sentence
+    constructedSentence.appendChild(wordElement);
+    
+    // Mark button as used
+    button.classList.add('used');
+    
+    // Update hidden input
+    updateConstructedAnswer();
+  }
+  
+  function removeWord(wordElement, originalButton) {
+    // Remove from constructed sentence
+    wordElement.remove();
+    
+    // Re-enable button in word bank
+    originalButton.classList.remove('used');
+    
+    // Update hidden input
+    updateConstructedAnswer();
+  }
+  
+  function updateConstructedAnswer() {
+    const constructedSentence = document.getElementById('constructed-sentence');
+    const words = Array.from(constructedSentence.querySelectorAll('.constructed-word'))
+      .map(el => el.textContent);
+    document.getElementById('constructed-answer').value = words.join(' ');
+  }
+</script>
+{% endif %}
+
 <!-- Keyboard shortcuts -->
 <script>
   document.addEventListener('keydown', function(e) {
-    // Enter to submit (but only if no feedback shown yet or retry allowed)
-    {% if not feedback or not show_continue %}
-    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.target.disabled) {
-      const form = document.querySelector('form');
-      const submitBtn = form.querySelector('button[type="submit"]');
-      if (submitBtn && !submitBtn.disabled) {
-        form.submit();
+    {% if feedback %}
+      {% if feedback.is_correct or not feedback.allow_retry %}
+        // Enter to continue (correct answer or out of retries)
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          window.location.href = '{% url 'exercise_play' lesson.id index|add:'1' %}';
+        }
+      {% else %}
+        // Enter to submit retry (wrong first attempt)
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.target.disabled) {
+          e.preventDefault();
+          const form = document.querySelector('#exerciseForm');
+          const submitBtn = form.querySelector('button[type="submit"]');
+          if (submitBtn && !submitBtn.disabled) {
+            form.submit();
+          }
+        }
+      {% endif %}
+    {% else %}
+      // Enter to submit initial answer (no feedback yet)
+      if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.target.disabled) {
+        e.preventDefault();
+        const form = document.querySelector('#exerciseForm');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn && !submitBtn.disabled) {
+          form.submit();
+        }
       }
-    }
     {% endif %}
     
     // Number keys for multiple choice (only if not showing feedback)
@@ -470,4 +621,178 @@
     {% endif %}
   });
 </script>
+
+<style>
+  /* Audio Button Styles */
+  .audio-play-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 32px;
+    background: linear-gradient(135deg, #1cb0f6 0%, #0084c7 100%);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 0 #0084c7;
+  }
+
+  .audio-play-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #0084c7;
+  }
+
+  .audio-play-btn:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #0084c7;
+  }
+
+  .audio-play-btn-slow {
+    background: linear-gradient(135deg, #ffc800 0%, #ff9600 100%);
+    box-shadow: 0 4px 0 #cc7a00;
+  }
+
+  .audio-play-btn-slow:hover {
+    box-shadow: 0 6px 0 #cc7a00;
+  }
+
+  .audio-play-btn-slow:active {
+    box-shadow: 0 2px 0 #cc7a00;
+  }
+
+  /* Word Bank Styles */
+  .word-bank-container {
+    margin-bottom: 32px;
+  }
+
+  .constructed-sentence {
+    min-height: 80px;
+    padding: 20px;
+    background: white;
+    border: 3px dashed var(--duo-gray);
+    border-radius: 16px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .word-bank {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    padding: 24px;
+    background: #f7f7f7;
+    border-radius: 16px;
+  }
+
+  .word-bank-btn {
+    padding: 16px 24px;
+    background: white;
+    border: 2px solid var(--duo-gray);
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--duo-text);
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 0 #ccc;
+  }
+
+  .word-bank-btn:hover:not(.used) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #ccc;
+  }
+
+  .word-bank-btn:active:not(.used) {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #ccc;
+  }
+
+  .word-bank-btn.used {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  .constructed-word {
+    padding: 16px 24px;
+    background: var(--duo-blue);
+    color: white;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #0084c7;
+    transition: all 0.2s;
+  }
+
+  .constructed-word:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #0084c7;
+  }
+
+  .constructed-word:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #0084c7;
+  }
+
+  /* Wrong choice highlighting */
+  .wrong-choice {
+    animation: shake 0.5s;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+  }
+
+  /* Accented Characters Keyboard */
+  .accent-keyboard {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 16px;
+    background: #f7f7f7;
+    border-radius: 12px;
+    flex-wrap: wrap;
+  }
+
+  .accent-btn {
+    min-width: 48px;
+    height: 48px;
+    padding: 8px 12px;
+    background: white;
+    border: 2px solid var(--duo-gray);
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--duo-text);
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 0 #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .accent-btn:hover {
+    background: #f0f9ff;
+    border-color: var(--duo-blue);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 0 #ccc;
+  }
+
+  .accent-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 0 #ccc;
+  }
+</style>
 {% endblock %}

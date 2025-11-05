@@ -16,6 +16,18 @@ class ExerciseAdmin(admin.ModelAdmin):
     list_filter = ("type", "is_new_word")
     search_fields = ("prompt", "answer_text")
 
+class ExerciseAdmin(admin.ModelAdmin):
+    inlines = [ExerciseChoiceInline]
+    list_display = ("lesson", "order", "type", "prompt", "is_new_word", "has_audio")  # ← Add has_audio
+    list_filter = ("type", "is_new_word")
+    search_fields = ("prompt", "answer_text")
+    
+    # Add this method
+    def has_audio(self, obj):
+        return bool(obj.audio_file)
+    has_audio.boolean = True
+    has_audio.short_description = "Audio"
+
 class UnitInline(admin.TabularInline):
     model = Unit
     extra = 1
