@@ -3,9 +3,9 @@
 {% block content %}
 <div class="completion-container">
   <div class="completion-icon">
-    {% if score == total %}
+    {% if perfect_count == total %}
       🏆
-    {% elif score >= total|floatformat:0|add:"-1" %}
+    {% elif score >= total %}
       🌟
     {% else %}
       🎉
@@ -13,41 +13,88 @@
   </div>
 
   <h2 style="font-size: 48px; margin-bottom: 16px;">
-    {% if score == total %}
-      Perfect!
-    {% elif score >= total|floatformat:0|add:"-1" %}
-      Awesome!
-    {% else %}
+    {% if perfect_count == total %}
+      Perfect Lesson!
+    {% elif score == total %}
       Lesson Complete!
+    {% else %}
+      Good Effort!
     {% endif %}
   </h2>
   
   <p style="font-size: 20px; color: #777;">
-    Great job on completing <strong>{{ lesson.title }}</strong>!
+    You finished <strong>{{ lesson.title }}</strong>!
   </p>
 
+  <!-- Detailed Score Display -->
   <div class="score-display">
     <div style="color: #777; font-size: 18px; margin-bottom: 8px;">Your Score</div>
-    <div class="score">{{ score }}/{{ total }}</div>
-    <div class="total">
+    <div class="score" style="font-size: 56px; font-weight: 900; color: var(--duo-text); margin-bottom: 8px;">
+      {{ score }}/{{ total }}
+    </div>
+    
+    <!-- Score Breakdown -->
+    <div style="margin-bottom: 24px;">
+      {% if perfect_count > 0 %}
+        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #d7ffb8; border-radius: 8px; margin: 4px;">
+          <span style="font-size: 24px;">✓</span>
+          <span style="font-weight: 700; color: var(--duo-green-dark);">
+            {{ perfect_count }} Perfect
+          </span>
+        </div>
+      {% endif %}
+      
+      {% if corrected_count > 0 %}
+        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #fff9e6; border-radius: 8px; margin: 4px;">
+          <span style="font-size: 24px;">⭐</span>
+          <span style="font-weight: 700; color: var(--duo-orange);">
+            {{ corrected_count }} Corrected
+          </span>
+        </div>
+      {% endif %}
+      
+      {% if failed_count > 0 %}
+        <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #ffd2d2; border-radius: 8px; margin: 4px;">
+          <span style="font-size: 24px;">✗</span>
+          <span style="font-weight: 700; color: var(--duo-red);">
+            {{ failed_count }} Incorrect
+          </span>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Percentage and Performance Message -->
+    <div class="total" style="font-size: 20px; color: var(--duo-text-light); margin-bottom: 24px;">
       {% widthratio score total 100 %}% Correct
+      {% if perfect_count == total %}
+        • All first-try! 🔥
+      {% elif corrected_count > 0 %}
+        • {{ corrected_count }} corrected on retry
+      {% endif %}
     </div>
 
     <!-- XP Earned -->
     <div style="margin-top: 24px; padding: 20px; background: #fff9e6; border-radius: 12px;">
       <div style="display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 20px; font-weight: 700; color: var(--duo-orange);">
         <span style="font-size: 32px;">⭐</span>
-        <span>+{{ completion_xp }} XP</span>
+        <span>+{{ completion_xp }} XP Bonus</span>
       </div>
     </div>
 
-    {% if score == total %}
+    <!-- Performance Badge -->
+    {% if perfect_count == total %}
+      <div style="margin-top: 24px; padding: 20px; background: linear-gradient(135deg, #ffd900 0%, #ffb800 100%); border-radius: 12px; color: #5c4200; font-weight: 700; box-shadow: 0 4px 0 #d99f00;">
+        <div style="font-size: 32px; margin-bottom: 8px;">🏆</div>
+        <div style="font-size: 20px; font-weight: 900;">FLAWLESS VICTORY!</div>
+        <div style="font-size: 14px; opacity: 0.9; margin-top: 4px;">Every answer correct on first try!</div>
+      </div>
+    {% elif score == total %}
       <div style="margin-top: 24px; padding: 16px; background: #d7ffb8; border-radius: 12px; color: var(--duo-green-dark); font-weight: 700;">
-        ⭐ Perfect Score! Outstanding work!
+        ⭐ Great Recovery! You got everything right!
       </div>
     {% elif score >= total|floatformat:0|add:"-1" %}
       <div style="margin-top: 24px; padding: 16px; background: #fff3cd; border-radius: 12px; color: #856404; font-weight: 700;">
-        🌟 Almost perfect! Excellent effort!
+        🌟 Almost there! Keep practicing!
       </div>
     {% endif %}
   </div>
@@ -82,6 +129,34 @@
     </a>
   </div>
 
+  <!-- Learning Tips -->
+  {% if corrected_count > 0 or failed_count > 0 %}
+    <div style="margin-top: 48px; padding: 24px; background: white; border-radius: 16px; box-shadow: var(--shadow); max-width: 500px;">
+      <h4 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px; justify-content: center;">
+        <span style="font-size: 28px;">💡</span>
+        <span>Keep Improving!</span>
+      </h4>
+      <div style="color: #777; line-height: 1.8; text-align: left; font-size: 14px;">
+        {% if corrected_count > 0 %}
+          <p style="margin-bottom: 12px;">
+            ✅ You corrected <strong>{{ corrected_count }}</strong> answer{{ corrected_count|pluralize }} - that shows great learning!
+          </p>
+        {% endif %}
+        {% if failed_count > 0 %}
+          <p style="margin-bottom: 12px;">
+            📚 Review the <strong>{{ failed_count }}</strong> question{{ failed_count|pluralize }} you missed by practicing this lesson again.
+          </p>
+        {% endif %}
+        <p style="margin-bottom: 12px;">
+          💪 <strong>Pro tip:</strong> Try to get all answers right on the first try for maximum XP!
+        </p>
+        <p>
+          🎯 Perfect lessons earn you special achievements and quest progress.
+        </p>
+      </div>
+    </div>
+  {% endif %}
+
   <!-- Motivational Message -->
   <div style="margin-top: 48px; padding: 24px; background: white; border-radius: 16px; box-shadow: var(--shadow); max-width: 500px;">
     <h4 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px; justify-content: center;">
@@ -89,23 +164,8 @@
       <span>Keep Your Streak Going!</span>
     </h4>
     <p style="color: #777; line-height: 1.6;">
-      Come back tomorrow to continue your learning journey and maintain your progress. Consistent practice is the key to mastery!
+      Come back tomorrow to continue your learning journey and maintain your {{ profile.streak_days }}-day streak. Consistency is the key to mastery!
     </p>
   </div>
-
-  <!-- Review Wrong Answers -->
-  {% if score < total %}
-    <div style="margin-top: 24px; padding: 24px; background: #fef7ff; border: 2px solid var(--duo-purple); border-radius: 16px; max-width: 500px;">
-      <h4 style="margin-bottom: 12px; color: var(--duo-purple);">
-        📝 Want to Review?
-      </h4>
-      <p style="color: #777; margin-bottom: 16px; font-size: 14px;">
-        You got {{ total|add:"-"|add:score }} question{{ total|add:"-"|add:score|pluralize }} wrong. Practice makes perfect!
-      </p>
-      <a href="{% url 'lesson_start' lesson.id %}" class="btn btn-small" style="background: var(--duo-purple); box-shadow: 0 4px 0 #9333ea;">
-        Review Mistakes
-      </a>
-    </div>
-  {% endif %}
 </div>
 {% endblock %}

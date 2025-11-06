@@ -2,12 +2,36 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.db.models import Count
-from datetime import date
+from datetime import date, datetime, time
 from .models import (
     Course, Section, Unit, Lesson, Exercise, ExerciseChoice,
     Attempt, LessonProgress, UserProfile, DailyQuest,
     UserDailyQuest, Achievement, UserAchievement
 )
+
+def restore_hearts_if_needed(profile):
+    """
+    Restore hearts to maximum if it's a new day since last heart restoration.
+    This should be called whenever a user interacts with the app.
+    """
+    from datetime import datetime, time, timedelta
+    
+    now = datetime.now()
+    
+    # Check if we have a last_heart_restore field
+    if profile.last_active_date:
+        # Get midnight of today
+        today_midnight = datetime.combine(date.today(), time.min)
+        
+        # Get midnight of last active date
+        last_active_midnight = datetime.combine(profile.last_active_date, time.min)
+        
+        # If last active was before today's midnight, restore hearts
+        if last_active_midnight < today_midnight:
+            profile.restore_hearts()
+    else:
+        # First time, ensure hearts are at max
+        profile.restore_hearts()
 
 def home(request):
     # Show onboarding page for non-logged-in users
@@ -16,6 +40,10 @@ def home(request):
 
     # Check if user has selected a language, if not redirect to language selection
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    
+    # Restore hearts if needed
+    restore_hearts_if_needed(profile)
+    
     if not profile.has_selected_language:
         return redirect("language_selection")
 
@@ -40,6 +68,7 @@ def course_list(request):
     selected_language = None
     if request.user.is_authenticated:
         profile = request.user.profile
+        restore_hearts_if_needed(profile)
         selected_language = profile.learning_language
     return render(request, "course_list.html", {"courses": courses, "selected_language": selected_language})
 
@@ -51,9 +80,13 @@ def course_detail(request, slug):
     if request.user.is_authenticated:
         profile = request.user.profile
         
+        # Restore hearts if needed
+        restore_hearts_if_needed(profile)
+        
         # Map course slug to language code
         slug_to_language = {
             'spanish-to-english': 'es',
+            'chinese-to-english': 'zh',
             'zh-en-basics': 'zh',
             'french-to-english': 'fr',
         }
@@ -96,6 +129,16 @@ def course_detail(request, slug):
 @login_required
 def lesson_start(request, lesson_id):
     lesson = get_object_or_404(Lesson, pk=lesson_id)
+    profile = request.user.profile
+    
+    # Restore hearts if needed
+    restore_hearts_if_needed(profile)
+    
+    # Clear any existing session data for this lesson (fresh start)
+    if 'lesson_attempts' in request.session:
+        if str(lesson_id) in request.session['lesson_attempts']:
+            del request.session['lesson_attempts'][str(lesson_id)]
+    
     exercises = list(lesson.exercises.all().order_by("order"))
     if not exercises:
         return render(request, "lesson_empty.html", {"lesson": lesson})
@@ -107,6 +150,9 @@ def exercise_play(request, lesson_id, index: int):
     lesson = get_object_or_404(Lesson, pk=lesson_id)
     exercises = list(lesson.exercises.all().order_by("order"))
     profile = request.user.profile
+
+    # Restore hearts if needed
+    restore_hearts_if_needed(profile)
 
     # Check if user has hearts
     if profile.hearts <= 0:
@@ -120,7 +166,22 @@ def exercise_play(request, lesson_id, index: int):
         return redirect("lesson_complete", lesson_id=lesson.id)
 
     exercise = exercises[index-1]
+    
+    # Initialize session storage for tracking attempts
+    if 'lesson_attempts' not in request.session:
+        request.session['lesson_attempts'] = {}
+    
+    lesson_key = str(lesson_id)
+    if lesson_key not in request.session['lesson_attempts']:
+        request.session['lesson_attempts'][lesson_key] = {}
+    
+    exercise_key = str(exercise.id)
+    
+    # Get attempt count for this exercise (0 = never attempted, 1 = first attempt made, 2 = second attempt made)
+    attempt_count = request.session['lesson_attempts'][lesson_key].get(exercise_key, 0)
+    
     feedback = None
+    show_continue = False
 
     if request.method == "POST":
         is_correct = False
@@ -133,9 +194,10 @@ def exercise_play(request, lesson_id, index: int):
                 selected_choice = ExerciseChoice.objects.filter(pk=choice_id, exercise=exercise).first()
                 is_correct = bool(selected_choice and selected_choice.is_correct)
         else:  # TRANSLATE
-            # super simple exact match; you can later add normalization and fuzzy match
+            # Simple exact match (can be improved with fuzzy matching)
             is_correct = submitted_text.lower() == exercise.answer_text.strip().lower()
 
+        # Record the attempt in database
         Attempt.objects.create(
             user=request.user,
             exercise=exercise,
@@ -144,11 +206,23 @@ def exercise_play(request, lesson_id, index: int):
             is_correct=is_correct,
         )
 
-        # Update hearts and XP
-        if not is_correct:
-            profile.lose_heart()
-        else:
-            profile.add_xp(10)  # Award 10 XP for correct answer
+        # Increment attempt count
+        attempt_count += 1
+        request.session['lesson_attempts'][lesson_key][exercise_key] = attempt_count
+        request.session.modified = True
+
+        if is_correct:
+            # Correct answer!
+            if attempt_count == 1:
+                # First try - perfect!
+                profile.add_xp(10)
+                request.session['lesson_attempts'][lesson_key][exercise_key] = 'perfect'
+            else:
+                # Second try - corrected
+                profile.add_xp(5)  # Half XP for retry
+                request.session['lesson_attempts'][lesson_key][exercise_key] = 'corrected'
+            
+            request.session.modified = True
             
             # Update XP quest progress
             today = date.today()
@@ -158,19 +232,44 @@ def exercise_play(request, lesson_id, index: int):
                 date_assigned=today
             ).first()
             if xp_quest:
-                xp_quest.update_progress(10)
-
-        # Update streak
-        profile.update_streak()
-
-        # Small inline feedback
-        feedback = {
-            "is_correct": is_correct,
-            "correct_answer": exercise.answer_text,
-        }
-        # If correct, advance automatically; else stay on the same one with feedback
-        if is_correct:
-            return redirect("exercise_play", lesson_id=lesson.id, index=index+1)
+                xp_reward = 10 if attempt_count == 1 else 5
+                xp_quest.update_progress(xp_reward)
+            
+            # Update streak
+            profile.update_streak()
+            
+            feedback = {
+                "is_correct": True,
+                "correct_answer": exercise.answer_text,
+                "first_try": attempt_count == 1,
+                "xp_earned": 10 if attempt_count == 1 else 5
+            }
+            show_continue = True
+        else:
+            # Wrong answer
+            if attempt_count == 1:
+                # First attempt wrong - lose heart, allow retry
+                profile.lose_heart()
+                feedback = {
+                    "is_correct": False,
+                    "correct_answer": exercise.answer_text,
+                    "allow_retry": True,
+                    "first_try": True
+                }
+                show_continue = False
+            else:
+                # Second attempt also wrong - mark as failed, move on
+                profile.lose_heart()
+                request.session['lesson_attempts'][lesson_key][exercise_key] = 'failed'
+                request.session.modified = True
+                
+                feedback = {
+                    "is_correct": False,
+                    "correct_answer": exercise.answer_text,
+                    "allow_retry": False,
+                    "first_try": False
+                }
+                show_continue = True
 
     return render(request, "exercise.html", {
         "lesson": lesson,
@@ -178,6 +277,8 @@ def exercise_play(request, lesson_id, index: int):
         "index": index,
         "total": len(exercises),
         "feedback": feedback,
+        "show_continue": show_continue,
+        "attempt_count": attempt_count,
         "profile": profile,
     })
 
@@ -187,17 +288,23 @@ def lesson_complete(request, lesson_id):
     exercises = list(lesson.exercises.all())
     profile = request.user.profile
 
-    # compute score = correct attempts on these exercises (latest per exercise)
-    latest = (
-        Attempt.objects
-        .filter(user=request.user, exercise__in=exercises)
-        .order_by("exercise_id", "-created_at")
-    )
-    latest_by_ex = {}
-    for a in latest:
-        if a.exercise_id not in latest_by_ex:
-            latest_by_ex[a.exercise_id] = a
-    score = sum(1 for a in latest_by_ex.values() if a.is_correct)
+    # Restore hearts if needed
+    restore_hearts_if_needed(profile)
+
+    # Get attempt tracking from session
+    lesson_key = str(lesson_id)
+    attempts_data = request.session.get('lesson_attempts', {}).get(lesson_key, {})
+    
+    # Count perfect, corrected, and failed
+    perfect_count = sum(1 for v in attempts_data.values() if v == 'perfect')
+    corrected_count = sum(1 for v in attempts_data.values() if v == 'corrected')
+    failed_count = sum(1 for v in attempts_data.values() if v == 'failed')
+    
+    total_correct = perfect_count + corrected_count
+    total_exercises = len(exercises)
+    
+    # Calculate score
+    score = total_correct
 
     lp, _ = LessonProgress.objects.get_or_create(user=request.user, lesson=lesson)
     lp.score = score
@@ -230,8 +337,8 @@ def lesson_complete(request, lesson_id):
     if lesson_quest:
         lesson_quest.update_progress(1)
 
-    # Check for perfect lesson (all correct)
-    if score == len(exercises):
+    # Check for perfect lesson (all correct on first try)
+    if perfect_count == total_exercises:
         perfect_quest = UserDailyQuest.objects.filter(
             user=request.user,
             quest__quest_type=DailyQuest.PERFECT_LESSON,
@@ -239,11 +346,19 @@ def lesson_complete(request, lesson_id):
         ).first()
         if perfect_quest:
             perfect_quest.update_progress(1)
+    
+    # Clear session data for this lesson
+    if lesson_key in request.session.get('lesson_attempts', {}):
+        del request.session['lesson_attempts'][lesson_key]
+        request.session.modified = True
 
     return render(request, "lesson_complete.html", {
         "lesson": lesson,
         "score": score,
-        "total": len(exercises),
+        "total": total_exercises,
+        "perfect_count": perfect_count,
+        "corrected_count": corrected_count,
+        "failed_count": failed_count,
         "profile": profile,
         "completion_xp": completion_xp,
     })
@@ -277,6 +392,9 @@ def user_profile(request):
     """Display user profile page"""
     profile = request.user.profile
     
+    # Restore hearts if needed
+    restore_hearts_if_needed(profile)
+    
     # Get user statistics
     total_lessons_completed = LessonProgress.objects.filter(
         user=request.user,
@@ -298,6 +416,10 @@ def user_profile(request):
 def quests(request):
     """Display quests page with daily and weekly challenges"""
     profile = request.user.profile
+    
+    # Restore hearts if needed
+    restore_hearts_if_needed(profile)
+    
     today = date.today()
     
     # Get or create today's daily quests
