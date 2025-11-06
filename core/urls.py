@@ -13,4 +13,5 @@ urlpatterns = [
     path("quests/", views.quests, name="quests"),
     path("leaderboards/", views.leaderboards, name="leaderboards"),  # NEW
     path("shop/", views.shop, name="shop"),
+    path("ajax/hint/<int:exercise_id>/", views.get_hint_ajax, name="get_hint_ajax"),
 ]

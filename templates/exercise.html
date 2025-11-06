@@ -129,6 +129,13 @@
               You corrected your answer! +{{ feedback.xp_earned }} XP
             {% endif %}
           </div>
+          
+          <!-- AI Feedback for Correct Answers (if using AI translation checker) -->
+          {% if feedback.ai_feedback %}
+            <div style="margin-top: 12px; font-size: 15px; color: #2d5016; background: rgba(255,255,255,0.5); padding: 12px; border-radius: 8px;">
+              💡 {{ feedback.ai_feedback }}
+            </div>
+          {% endif %}
         {% else %}
           <div style="font-size: 28px; font-weight: 900; color: #c70000; margin-bottom: 8px;">
             {% if feedback.allow_retry %}
@@ -140,8 +147,22 @@
           <div style="font-size: 18px; color: #5c0000; font-weight: 600; margin-bottom: 8px;">
             Correct answer: <strong style="background: white; padding: 4px 12px; border-radius: 8px; color: var(--duo-green);">{{ feedback.correct_answer }}</strong>
           </div>
+          
+          <!-- AI-Generated Mistake Explanation (Feature #4) -->
+          {% if feedback.ai_explanation %}
+            <div style="font-size: 15px; color: #5c0000; font-weight: 600; padding: 16px; background: rgba(255,255,255,0.7); border-radius: 12px; margin-top: 12px; border-left: 4px solid #c70000;">
+              <div style="display: flex; align-items: start; gap: 12px;">
+                <span style="font-size: 24px; flex-shrink: 0;">🤖</span>
+                <div>
+                  <strong style="display: block; margin-bottom: 8px; color: #c70000;">AI Teacher Says:</strong>
+                  <span style="color: #5c0000;">{{ feedback.ai_explanation }}</span>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+          
           {% if feedback.allow_retry %}
-            <div style="font-size: 16px; color: #5c0000; font-weight: 600; padding: 12px; background: rgba(255,255,255,0.5); border-radius: 8px; margin-top: 8px;">
+            <div style="font-size: 16px; color: #5c0000; font-weight: 600; padding: 12px; background: rgba(255,255,255,0.5); border-radius: 8px; margin-top: 12px;">
               💡 <strong>Try again!</strong> You have one more chance to get it right.
             </div>
           {% else %}
@@ -266,7 +287,6 @@
                 <input type="radio" name="choice" value="{{ choice.id }}" required>
                 <div class="choice-content">
                   {% if choice.text|length <= 3 %}
-                    <!-- Emoji or short character -->
                     <div class="choice-image">{{ choice.text }}</div>
                   {% endif %}
                   
@@ -296,139 +316,192 @@
           </div>
         {% endif %}
       {% endif %}
-
-    {% elif exercise.type == "LC" %}
-      <!-- Listen & Construct (Word Bank) -->
-      <div class="word-bank-container">
-        <div class="constructed-sentence" id="constructed-sentence">
-          <!-- Selected words will appear here -->
+    {% elif exercise.type == "LS" or exercise.type == "LC" %}
+      <!-- Listen & Select or Listen & Construct Exercise -->
+      {% if exercise.type == "LC" %}
+        <!-- Word Bank for Listening Construction -->
+        <div class="word-bank-container">
+          <div id="constructed-sentence" class="constructed-sentence">
+            <!-- Words will be added here by clicking buttons -->
+          </div>
+          
+          <div class="word-bank">
+            {% for word in exercise.word_bank %}
+              <button type="button" class="word-bank-btn" onclick="addWord(this, '{{ word }}')">
+                {{ word }}
+              </button>
+            {% endfor %}
+          </div>
+          
+          <input type="hidden" name="answer" id="constructed-answer" value="">
         </div>
-         
-        <div class="word-bank" id="word-bank">
-          {% for choice in exercise.choices.all %}
-            <button type="button" class="word-bank-btn" data-word="{{ choice.text }}" onclick="addWord(this)">
-              {{ choice.text }}
-            </button>
-          {% endfor %}
-        </div>
-         
-        <!-- Hidden input to store the constructed answer -->
-        <input type="hidden" name="answer" id="constructed-answer" required>
-      </div>
-
-    {% elif exercise.type == "LS" %}
-      <!-- Listen Exercise -->
-      {% if feedback and feedback.is_correct %}
-        <!-- Show correct answer in input when correct -->
-        <input
-          type="text"
-          class="answer-input"
-          id="answer-input"
-          value="{{ exercise.answer_text }}"
-          disabled
-          style="background: #f0fdf4; border-color: var(--duo-green); color: var(--duo-green-dark);"
-        >
-      {% elif feedback and not feedback.allow_retry %}
-        <!-- Show correct answer when failed -->
-        <input
-          type="text"
-          class="answer-input"
-          id="answer-input"
-          value="{{ exercise.answer_text }}"
-          disabled
-          style="background: #f0fdf4; border-color: var(--duo-green); color: var(--duo-green-dark);"
-        >
       {% else %}
-        <!-- Allow input -->
-        <input
-          type="text"
-          name="answer"
-          class="answer-input"
-          id="answer-input"
-          placeholder="Type what you hear..."
-          {% if feedback and not feedback.is_correct and feedback.allow_retry %}value="{{ feedback.user_answer }}"{% endif %}
-          required
-          autofocus
-        >
-        <!-- Accented Characters Keyboard -->
-        <div class="accent-keyboard">
-          <button type="button" class="accent-btn" onclick="insertChar('á')">á</button>
-          <button type="button" class="accent-btn" onclick="insertChar('é')">é</button>
-          <button type="button" class="accent-btn" onclick="insertChar('í')">í</button>
-          <button type="button" class="accent-btn" onclick="insertChar('ó')">ó</button>
-          <button type="button" class="accent-btn" onclick="insertChar('ú')">ú</button>
-          <button type="button" class="accent-btn" onclick="insertChar('ñ')">ñ</button>
-          <button type="button" class="accent-btn" onclick="insertChar('ü')">ü</button>
-          <button type="button" class="accent-btn" onclick="insertChar('¿')">¿</button>
-          <button type="button" class="accent-btn" onclick="insertChar('¡')">¡</button>
-        </div>
+        <!-- Regular text input for listening -->
+        {% if feedback and feedback.is_correct %}
+          <input
+            type="text"
+            class="answer-input"
+            value="{{ exercise.answer_text }}"
+            disabled
+            style="background: #f0fdf4; border-color: var(--duo-green); color: var(--duo-green-dark);"
+          >
+        {% elif feedback and not feedback.allow_retry %}
+          <input
+            type="text"
+            class="answer-input"
+            value="{{ exercise.answer_text }}"
+            disabled
+            style="background: #f0fdf4; border-color: var(--duo-green); color: var(--duo-green-dark);"
+          >
+        {% else %}
+          <input
+            type="text"
+            name="answer"
+            class="answer-input"
+            placeholder="Type what you hear..."
+            required
+            autofocus
+          >
+        {% endif %}
       {% endif %}
-
     {% else %}
-      <!-- Translation Input (TR and other types) -->
+      <!-- Translation Input (TR type) -->
       {% if feedback and feedback.is_correct %}
-        <!-- Show correct answer in input when correct -->
         <input
           type="text"
           class="answer-input"
-          id="answer-input"
           value="{{ exercise.answer_text }}"
           disabled
           style="background: #f0fdf4; border-color: var(--duo-green); color: var(--duo-green-dark);"
         >
       {% elif feedback and not feedback.allow_retry %}
-        <!-- Show correct answer when failed -->
         <input
           type="text"
           class="answer-input"
-          id="answer-input"
           value="{{ exercise.answer_text }}"
           disabled
           style="background: #f0fdf4; border-color: var(--duo-green); color: var(--duo-green-dark);"
         >
       {% else %}
-        <!-- Allow input -->
         <input
           type="text"
           name="answer"
-          class="answer-input"
           id="answer-input"
+          class="answer-input"
           placeholder="Type your translation here..."
-          {% if feedback and not feedback.is_correct and feedback.allow_retry %}value="{{ feedback.user_answer }}"{% endif %}
           required
           autofocus
         >
-        <!-- Accented Characters Keyboard -->
-        <div class="accent-keyboard">
-          <button type="button" class="accent-btn" onclick="insertChar('á')">á</button>
-          <button type="button" class="accent-btn" onclick="insertChar('é')">é</button>
-          <button type="button" class="accent-btn" onclick="insertChar('í')">í</button>
-          <button type="button" class="accent-btn" onclick="insertChar('ó')">ó</button>
-          <button type="button" class="accent-btn" onclick="insertChar('ú')">ú</button>
-          <button type="button" class="accent-btn" onclick="insertChar('ñ')">ñ</button>
-          <button type="button" class="accent-btn" onclick="insertChar('ü')">ü</button>
-          <button type="button" class="accent-btn" onclick="insertChar('¿')">¿</button>
-          <button type="button" class="accent-btn" onclick="insertChar('¡')">¡</button>
-        </div>
+        
+        <!-- Accented Characters Keyboard (for Spanish, French, etc.) -->
+        {% if profile.learning_language == 'es' or profile.learning_language == 'fr' %}
+          <div class="accent-keyboard">
+            {% if profile.learning_language == 'es' %}
+              <button type="button" class="accent-btn" onclick="insertChar('á')">á</button>
+              <button type="button" class="accent-btn" onclick="insertChar('é')">é</button>
+              <button type="button" class="accent-btn" onclick="insertChar('í')">í</button>
+              <button type="button" class="accent-btn" onclick="insertChar('ó')">ó</button>
+              <button type="button" class="accent-btn" onclick="insertChar('ú')">ú</button>
+              <button type="button" class="accent-btn" onclick="insertChar('ñ')">ñ</button>
+              <button type="button" class="accent-btn" onclick="insertChar('¿')">¿</button>
+              <button type="button" class="accent-btn" onclick="insertChar('¡')">¡</button>
+            {% elif profile.learning_language == 'fr' %}
+              <button type="button" class="accent-btn" onclick="insertChar('à')">à</button>
+              <button type="button" class="accent-btn" onclick="insertChar('â')">â</button>
+              <button type="button" class="accent-btn" onclick="insertChar('é')">é</button>
+              <button type="button" class="accent-btn" onclick="insertChar('è')">è</button>
+              <button type="button" class="accent-btn" onclick="insertChar('ê')">ê</button>
+              <button type="button" class="accent-btn" onclick="insertChar('ë')">ë</button>
+              <button type="button" class="accent-btn" onclick="insertChar('î')">î</button>
+              <button type="button" class="accent-btn" onclick="insertChar('ï')">ï</button>
+              <button type="button" class="accent-btn" onclick="insertChar('ô')">ô</button>
+              <button type="button" class="accent-btn" onclick="insertChar('ù')">ù</button>
+              <button type="button" class="accent-btn" onclick="insertChar('û')">û</button>
+              <button type="button" class="accent-btn" onclick="insertChar('ç')">ç</button>
+            {% endif %}
+          </div>
+        {% endif %}
       {% endif %}
     {% endif %}
 
-    <!-- Hint -->
-    {% if exercise.hint and not feedback %}
-      <div style="text-align: center; margin-bottom: 24px;">
-        <details style="cursor: pointer;">
-          <summary style="color: var(--duo-blue); font-weight: 700; font-size: 14px; text-transform: uppercase;">
-            💡 Show Hint
-          </summary>
-          <p style="margin-top: 12px; color: var(--duo-text-light); padding: 16px; background: #f0f9ff; border-radius: 12px;">
-            {{ exercise.hint }}
-          </p>
-        </details>
+    <!-- AI-Powered Smart Hint Section (Feature #2) -->
+    {% if not feedback or feedback.allow_retry %}
+      <div style="text-align: center; margin: 24px 0;">
+        <!-- AI Hint Container (hidden until loaded) -->
+        <div id="hint-container" style="display: none; margin-bottom: 16px; padding: 16px; background: #f0f9ff; border-radius: 12px; border-left: 4px solid var(--duo-blue); text-align: left;">
+          <div style="display: flex; align-items: start; gap: 12px;">
+            <span style="font-size: 24px; flex-shrink: 0;">💡</span>
+            <div style="flex: 1;">
+              <strong style="color: var(--duo-blue); display: block; margin-bottom: 8px;">AI Smart Hint:</strong>
+              <p id="hint-text" style="color: var(--duo-text); margin: 0; line-height: 1.6;"></p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Get AI Hint Button -->
+        <button type="button" id="hint-button" onclick="getAIHint()" class="btn-gray btn" style="margin-bottom: 8px;">
+          <span id="hint-button-text">💡 Get Smart Hint</span>
+          <span id="hint-loading" style="display: none;">
+            <span class="spinner">⏳</span> Generating hint...
+          </span>
+        </button>
+        
+        <!-- Static hint fallback (if available) -->
+        {% if exercise.hint %}
+          <details style="cursor: pointer; margin-top: 8px;">
+            <summary style="color: var(--duo-text-light); font-weight: 700; font-size: 13px; text-transform: uppercase; padding: 8px;">
+              📝 Quick Tip
+            </summary>
+            <p style="margin-top: 12px; color: var(--duo-text-light); padding: 12px; background: #f7f7f7; border-radius: 8px; font-size: 14px; line-height: 1.5;">
+              {{ exercise.hint }}
+            </p>
+          </details>
+        {% endif %}
       </div>
+      
+      <script>
+        let hintRequested = false;
+        
+        function getAIHint() {
+          if (hintRequested) return;
+          hintRequested = true;
+          
+          const button = document.getElementById('hint-button');
+          const buttonText = document.getElementById('hint-button-text');
+          const loading = document.getElementById('hint-loading');
+          const container = document.getElementById('hint-container');
+          const hintText = document.getElementById('hint-text');
+          
+          // Show loading state
+          buttonText.style.display = 'none';
+          loading.style.display = 'inline-flex';
+          button.disabled = true;
+          
+          // Fetch AI hint via AJAX
+          fetch('/ajax/hint/{{ exercise.id }}/')
+            .then(response => {
+              if (!response.ok) {
+                throw new Error('Network response was not ok');
+              }
+              return response.json();
+            })
+            .then(data => {
+              hintText.textContent = data.hint;
+              container.style.display = 'block';
+              button.style.display = 'none';
+            })
+            .catch(error => {
+              console.error('Error fetching hint:', error);
+              hintText.textContent = 'Sorry, couldn\'t generate a hint right now. Try the quick tip below!';
+              container.style.display = 'block';
+              button.style.display = 'none';
+            });
+        }
+      </script>
     {% endif %}
 
     <!-- Action Buttons -->
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 32px;">
       <button type="button" onclick="window.location.href='{% url 'course_detail' lesson.unit.section.course.slug %}'" 
               class="btn-gray btn">
         ✕ Exit
@@ -436,18 +509,26 @@
 
       <div style="display: flex; gap: 12px;">
         {% if not feedback %}
-          <!-- Before any submission -->
           {% if exercise.type == "MC" %}
-            <button type="button" onclick="skipQuestion()" class="btn-gray btn">
+            <button type="button" onclick="skip()" class="btn-gray btn">
               Skip
             </button>
+            <script>
+              function skip() {
+                if (confirm('Are you sure you want to skip this question?')) {
+                  window.location.href = '{% url 'exercise_play' lesson.id index|add:'1' %}';
+                }
+              }
+            </script>
           {% endif %}
           
-          <button type="submit" class="btn">
-            Check
+          <button type="submit" class="btn" id="submit-btn">
+            <span class="submit-text">Check</span>
+            <span class="submit-loading" style="display: none;">
+              <span class="spinner">⏳</span> Checking...
+            </span>
           </button>
-        {% elif feedback.is_correct or not feedback.allow_retry %}
-          <!-- Show continue button (correct answer OR failed second attempt) -->
+        {% elif show_continue %}
           <button type="button" 
                   onclick="window.location.href='{% url 'exercise_play' lesson.id index|add:'1' %}'"
                   class="btn"
@@ -455,7 +536,6 @@
             Continue →
           </button>
         {% else %}
-          <!-- Show try again button (wrong first attempt) -->
           <button type="submit" class="btn" style="background: var(--duo-orange); box-shadow: 0 4px 0 #d97706;">
             Try Again
           </button>
@@ -480,14 +560,14 @@
 
   <!-- Keyboard shortcuts hint -->
   <div style="text-align: center; margin-top: 16px; color: var(--duo-text-light); font-size: 12px;">
-    Press <kbd style="background: var(--duo-gray); padding: 2px 8px; border-radius: 4px;">Enter</kbd> to submit
+    Press <kbd style="background: var(--duo-gray); padding: 2px 8px; border-radius: 4px; font-family: monospace;">Enter</kbd> to submit
     {% if exercise.type == "MC" and not feedback %}
-      • Press <kbd style="background: var(--duo-gray); padding: 2px 8px; border-radius: 4px;">1</kbd>-<kbd style="background: var(--duo-gray); padding: 2px 8px; border-radius: 4px;">{{ exercise.choices.count }}</kbd> to select
+      • Press <kbd style="background: var(--duo-gray); padding: 2px 8px; border-radius: 4px; font-family: monospace;">1</kbd>-<kbd style="background: var(--duo-gray); padding: 2px 8px; border-radius: 4px; font-family: monospace;">{{ exercise.choices.count }}</kbd> to select
     {% endif %}
   </div>
 </div>
 
-<!-- Audio playback scripts -->
+<!-- Audio Functions -->
 <script>
   function playExerciseAudio() {
     const audio = document.getElementById('exercise-audio');
@@ -496,46 +576,61 @@
       audio.play();
     }
   }
-
+  
   function playExerciseAudioSlow() {
     const audio = document.getElementById('exercise-audio-slow');
     if (audio) {
-      audio.playbackRate = 0.75;
+      audio.playbackRate = 0.6; // Slower playback
       audio.play();
     }
   }
+  
+  // Auto-play audio for listening exercises
+  {% if exercise.type == "LS" or exercise.type == "LC" %}
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      playExerciseAudio();
+    }, 500);
+  });
+  {% endif %}
+</script>
 
-  function skipQuestion() {
-    if (confirm('Are you sure you want to skip this question?')) {
-      window.location.href = '{% url 'exercise_play' lesson.id index|add:'1' %}';
-    }
-  }
-
-  // Insert accented character at cursor position
+<!-- Accented Character Insertion -->
+<script>
   function insertChar(char) {
     const input = document.getElementById('answer-input');
-    if (!input) return;
-    
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-    const text = input.value;
-    
-    // Insert character at cursor position
-    input.value = text.substring(0, start) + char + text.substring(end);
-    
-    // Move cursor after inserted character
-    input.selectionStart = input.selectionEnd = start + 1;
-    
-    // Focus back on input
-    input.focus();
+    if (input) {
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const text = input.value;
+      input.value = text.substring(0, start) + char + text.substring(end);
+      input.focus();
+      input.setSelectionRange(start + 1, start + 1);
+    }
   }
 </script>
 
-<!-- Word Bank functionality for Listen & Construct -->
+<!-- Show loading state on form submit -->
+<script>
+  document.getElementById('exerciseForm').addEventListener('submit', function(e) {
+    const submitBtn = document.getElementById('submit-btn');
+    if (submitBtn) {
+      const submitText = submitBtn.querySelector('.submit-text');
+      const submitLoading = submitBtn.querySelector('.submit-loading');
+      if (submitText && submitLoading) {
+        submitText.style.display = 'none';
+        submitLoading.style.display = 'inline-flex';
+        submitBtn.disabled = true;
+      }
+    }
+  });
+</script>
+
+<!-- Word Bank Construction (for LC type exercises) -->
 {% if exercise.type == "LC" %}
 <script>
-  function addWord(button) {
-    const word = button.getAttribute('data-word');
+  function addWord(button, word) {
+    // Get constructed sentence container
     const constructedSentence = document.getElementById('constructed-sentence');
     
     // Create word element
@@ -543,8 +638,11 @@
     wordElement.className = 'constructed-word';
     wordElement.textContent = word;
     wordElement.onclick = function() {
-      removeWord(this, button);
+      removeWord(wordElement, button);
     };
+    
+    // Store reference to original button
+    wordElement.dataset.buttonId = Array.from(button.parentNode.children).indexOf(button);
     
     // Add to constructed sentence
     constructedSentence.appendChild(wordElement);
@@ -623,6 +721,17 @@
 </script>
 
 <style>
+  /* Spinner Animation */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .spinner {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+  }
+
   /* Audio Button Styles */
   .audio-play-btn {
     display: inline-flex;
