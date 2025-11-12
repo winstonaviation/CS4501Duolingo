@@ -12,12 +12,6 @@ class ExerciseChoiceInline(admin.TabularInline):
 
 class ExerciseAdmin(admin.ModelAdmin):
     inlines = [ExerciseChoiceInline]
-    list_display = ("lesson", "order", "type", "prompt", "is_new_word")
-    list_filter = ("type", "is_new_word")
-    search_fields = ("prompt", "answer_text")
-
-class ExerciseAdmin(admin.ModelAdmin):
-    inlines = [ExerciseChoiceInline]
     list_display = ("lesson", "order", "type", "prompt", "is_new_word", "has_audio")  # ← Add has_audio
     list_filter = ("type", "is_new_word")
     search_fields = ("prompt", "answer_text")
