@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Quests · Duolingo{% endblock %}
+{% block title %}Quests · Multilingo{% endblock %}
 
 {% block content %}
 <style>
@@ -302,10 +302,10 @@
                 <span class="sidebar-nav-icon">🏠</span>
                 <span>LEARN</span>
             </a>
-{#            <a href="#" class="sidebar-nav-item">#}
-{#                <span class="sidebar-nav-icon">🏆</span>#}
-{#                <span>LEADERBOARDS</span>#}
-{#            </a>#}
+            <a href="#" class="sidebar-nav-item">
+               <span class="sidebar-nav-icon">🏆</span>
+               <span>LEADERBOARDS</span>
+           </a>
             <a href="{% url 'quests' %}" class="sidebar-nav-item active">
                 <span class="sidebar-nav-icon">🎯</span>
                 <span>QUESTS</span>

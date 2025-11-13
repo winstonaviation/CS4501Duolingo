@@ -3,7 +3,7 @@ from core.models import Course, Section, Unit, Lesson, Exercise, ExerciseChoice,
 
 
 class Command(BaseCommand):
-    help = 'Populate the database with Spanish demo content matching Duolingo UI'
+    help = 'Populate the database with Spanish demo content matching Multilingo UI'
 
     def handle(self, *args, **kwargs):
         self.stdout.write('Populating Spanish demo data...')
