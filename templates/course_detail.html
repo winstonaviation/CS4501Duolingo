@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load dict_extras %}
 
-{% block title %}{{ course.title }} · Duolingo{% endblock %}
+{% block title %}{{ course.title }} · Multilingo{% endblock %}
 
 {% block content %}
 <div class="main-layout">
@@ -12,26 +12,26 @@
         <span class="sidebar-nav-icon">🏠</span>
         <span>LEARN</span>
       </a>
-      <a href="#" class="sidebar-nav-item">
+      <a href="{% url 'leaderboards' %}" class="sidebar-nav-item">
         <span class="sidebar-nav-icon">🏆</span>
-        <span>LEADERBOARDS</span>
+       <span>LEADERBOARDS</span>
       </a>
       <a href="{% url 'quests' %}" class="sidebar-nav-item">
         <span class="sidebar-nav-icon">🎯</span>
         <span>QUESTS</span>
       </a>
-      <a href="#" class="sidebar-nav-item">
-        <span class="sidebar-nav-icon">🏪</span>
-        <span>SHOP</span>
-      </a>
+{#      <a href="#" class="sidebar-nav-item">#}
+{#        <span class="sidebar-nav-icon">🏪</span>#}
+{#        <span>SHOP</span>#}
+{#      </a>#}
       <a href="{% url 'user_profile' %}" class="sidebar-nav-item">
         <span class="sidebar-nav-icon">👤</span>
         <span>PROFILE</span>
       </a>
-      <a href="#" class="sidebar-nav-item">
-        <span class="sidebar-nav-icon">⋯</span>
-        <span>MORE</span>
-      </a>
+{#      <a href="#" class="sidebar-nav-item">#}
+{#        <span class="sidebar-nav-icon">⋯</span>#}
+{#        <span>MORE</span>#}
+{#      </a>#}
     </nav>
   </aside>
 
@@ -162,22 +162,26 @@
           <span class="stat-value">{{ profile.hearts }}</span>
         </div>
       </div>
-
+     
       <!-- Super Duolingo Promo -->
+       <!--
       <div class="sidebar-card super-promo">
-        <div class="super-mascot">🦉</div>
+        <div class="super-mascot">🐬</div>
         <div class="super-badge">SUPER</div>
         <h3>Try Super for free</h3>
         <p>No ads, personalized practice, and unlimited Legendary!</p>
         <button class="btn">TRY 1 WEEK FREE</button>
       </div>
+      -->
 
       <!-- Unlock Leaderboards -->
+      {% if not is_unlocked %}
       <div class="sidebar-card unlock-card">
         <div class="unlock-icon">🔒</div>
         <h3>Unlock Leaderboards!</h3>
-        <p>Complete 10 more lessons to start competing</p>
+        <p>Complete {{lessons_needed}} more lessons to start competing</p>
       </div>
+      {% endif %}
 
       <!-- Daily Quests -->
       {% if daily_quests %}

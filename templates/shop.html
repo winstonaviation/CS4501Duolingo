@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Shop · Multilingo{% endblock %}
+
+{% block content %}
+<style>
+    .shop-layout {
+        display: grid;
+        grid-template-columns: 280px 1fr 380px;
+        gap: 24px;
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 24px;
+        min-height: calc(100vh - 80px);
+    }
+
+    .shop-main {
+        max-width: 800px;
+    }
+
+    .shop-header {
+        margin-bottom: 40px;
+    }
+
+    .shop-hero {
+        background: linear-gradient(135deg, #1e3a5f 0%, #2d5a7b 50%, #1e3a5f 100%);
+        border-radius: 20px;
+        padding: 40px;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 40px;
+        box-shadow: 0 8px 24px rgba(30, 58, 95, 0.3);
+    }
+
+    .shop-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+
+    .shop-hero-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .shop-hero-text h1 {
+        font-size: 32px;
+        font-weight: 900;
+        margin-bottom: 8px;
+    }
+
+    .shop-hero-text p {
+        font-size: 16px;
+        opacity: 0.95;
+        margin-bottom: 20px;
+    }
+
+    .shop-hero-mascot {
+        font-size: 120px;
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+    }
+
+    .shop-section {
+        margin-bottom: 48px;
+    }
+
+    .shop-section h2 {
+        font-size: 28px;
+        font-weight: 900;
+        color: var(--duo-text);
+        margin-bottom: 24px;
+    }
+
+    .shop-items {
+        display: grid;
+        gap: 16px;
+    }
+
+    .shop-item {
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        transition: all 0.2s;
+    }
+
+    .shop-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .shop-item-icon {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        background: #f7f7f7;
+        border-radius: 12px;
+        flex-shrink: 0;
+    }
+
+    .shop-item-icon.heart {
+        background: linear-gradient(135deg, #ffe0e0 0%, #ffc0c0 100%);
+    }
+
+    .shop-item-icon.infinite {
+        background: linear-gradient(135deg, #d0f4ff 0%, #a0e0ff 100%);
+    }
+
+    .shop-item-icon.freeze {
+        background: linear-gradient(135deg, #d0e0ff 0%, #a0c0ff 100%);
+    }
+
+    .shop-item-info {
+        flex: 1;
+    }
+
+    .shop-item-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: var(--duo-text);
+        margin-bottom: 4px;
+    }
+
+    .shop-item-description {
+        font-size: 14px;
+        color: var(--duo-text-light);
+        line-height: 1.5;
+    }
+
+    .shop-item-action {
+        flex-shrink: 0;
+    }
+
+    .shop-item-button {
+        padding: 12px 24px;
+        font-size: 14px;
+        font-weight: 700;
+        border-radius: 12px;
+        border: 2px solid var(--duo-gray);
+        background: white;
+        color: var(--duo-text);
+        cursor: pointer;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .shop-item-button:hover {
+        background: #f7f7f7;
+    }
+
+    .shop-item-button.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .shop-item-button.primary {
+        background: var(--duo-blue);
+        color: white;
+        border-color: var(--duo-blue);
+        box-shadow: 0 4px 0 #0e8fd3;
+    }
+
+    .shop-item-button.primary:hover {
+        background: #1cb0f6;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 0 #0e8fd3;
+    }
+
+    .shop-item-button.primary:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px 0 #0e8fd3;
+    }
+
+    .shop-item-button.trial {
+        background: linear-gradient(135deg, #ff66d9 0%, #ff3399 100%);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 0 #cc0077;
+    }
+
+    .shop-item-button.trial:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 0 #cc0077;
+    }
+
+    .shop-item-price {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--duo-text);
+        margin-bottom: 12px;
+    }
+
+    .shop-item-price-icon {
+        font-size: 24px;
+    }
+
+    .shop-item.full {
+        opacity: 0.6;
+    }
+
+    .shop-item-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 16px;
+        background: #e5e5e5;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--duo-text-light);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .shop-item-equipped {
+        font-size: 12px;
+        color: var(--duo-text-light);
+        margin-top: 8px;
+    }
+
+    @media (max-width: 1200px) {
+        .shop-layout {
+            grid-template-columns: 1fr 380px;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .shop-layout {
+            grid-template-columns: 1fr;
+        }
+        
+        .shop-item {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="shop-layout">
+    <!-- Left Sidebar -->
+    <aside class="left-sidebar">
+        <nav class="sidebar-nav">
+            <a href="{% url 'home' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🏠</span>
+                <span>LEARN</span>
+            </a>
+            <!--
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">💪</span>
+                <span>PRACTICE</span>
+            </a>
+            -->
+            <a href="{% url 'leaderboards' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🏆</span>
+                <span>LEADERBOARDS</span>
+            </a>
+            <a href="{% url 'quests' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">🎯</span>
+                <span>QUESTS</span>
+            </a>
+            <a href="{% url 'shop' %}" class="sidebar-nav-item active">
+                <span class="sidebar-nav-icon">🛍️</span>
+                <span>SHOP</span>
+            </a>
+            <a href="{% url 'user_profile' %}" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">👤</span>
+                <span>PROFILE</span>
+            </a>
+            <a href="#" class="sidebar-nav-item">
+                <span class="sidebar-nav-icon">⋯</span>
+                <span>MORE</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="shop-main">
+        <!-- Family Plan Promo -->
+        <div class="shop-hero">
+            <div class="shop-hero-content">
+                <div class="shop-hero-text">
+                    <h1>Start a family plan!</h1>
+                    <p>Save on Super Multilingo when you learn with friends</p>
+                    <button class="btn" style="background: white; color: var(--duo-text); box-shadow: 0 4px 0 rgba(0,0,0,0.1);">
+                        LEARN MORE
+                    </button>
+                </div>
+                <div class="shop-hero-mascot">
+                    🐬
+                </div>
+            </div>
+        </div>
+
+        <!-- Hearts Section -->
+        <div class="shop-section">
+            <h2>Hearts</h2>
+            <div class="shop-items">
+                <!-- Refill Hearts -->
+                <div class="shop-item {% if profile.hearts >= profile.max_hearts %}full{% endif %}">
+                    <div class="shop-item-icon heart">
+                        <span style="font-size: 56px;">❤️</span>
+                    </div>
+                    <div class="shop-item-info">
+                        <h3 class="shop-item-title">Refill Hearts</h3>
+                        <p class="shop-item-description">
+                            Get full hearts so you can worry less about making mistakes in a lesson
+                        </p>
+                    </div>
+                    <div class="shop-item-action">
+                        {% if profile.hearts >= profile.max_hearts %}
+                            <div class="shop-item-status">FULL</div>
+                        {% else %}
+                            <div class="shop-item-price">
+                                <span class="shop-item-price-icon">💎</span>
+                                <span>350</span>
+                            </div>
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="item_type" value="refill_hearts">
+                                <button type="submit" class="shop-item-button primary" {% if profile.gems < 350 %}disabled{% endif %}>
+                                    {% if profile.gems >= 350 %}GET{% else %}NOT ENOUGH{% endif %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Unlimited Hearts -->
+                <div class="shop-item">
+                    <div class="shop-item-icon infinite">
+                        <span style="background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 56px; font-weight: 900;">∞</span>
+                    </div>
+                    <div class="shop-item-info">
+                        <h3 class="shop-item-title">Unlimited Hearts</h3>
+                        <p class="shop-item-description">
+                            Never run out of hearts with Super!
+                        </p>
+                    </div>
+                    <div class="shop-item-action">
+                        <button class="shop-item-button trial">
+                            FREE TRIAL
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Power-Ups Section -->
+        <div class="shop-section">
+            <h2>Power-Ups</h2>
+            <div class="shop-items">
+                <!-- Streak Freeze -->
+                <div class="shop-item">
+                    <div class="shop-item-icon freeze">
+                        <span style="font-size: 56px;">❄️</span>
+                    </div>
+                    <div class="shop-item-info">
+                        <h3 class="shop-item-title">Streak Freeze</h3>
+                        <p class="shop-item-description">
+                            Streak Freeze allows your streak to remain in place for one full day of inactivity
+                        </p>
+                        <div class="shop-item-equipped">
+                            0 / 2 EQUIPPED
+                        </div>
+                    </div>
+                    <div class="shop-item-action">
+                        <div class="shop-item-price">
+                            <span class="shop-item-price-icon">💎</span>
+                            <span>200</span>
+                        </div>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="item_type" value="streak_freeze">
+                            <button type="submit" class="shop-item-button primary" {% if profile.gems < 200 %}disabled{% endif %}>
+                                {% if profile.gems >= 200 %}GET FOR:{% else %}NOT ENOUGH{% endif %}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Streak Repair -->
+                <div class="shop-item" style="opacity: 0.5;">
+                    <div class="shop-item-icon" style="background: linear-gradient(135deg, #ffe0b3 0%, #ffcc80 100%);">
+                        <span style="font-size: 56px;">🔧</span>
+                    </div>
+                    <div class="shop-item-info">
+                        <h3 class="shop-item-title">Streak Repair</h3>
+                        <p class="shop-item-description">
+                            Repair your streak after missing a day (available after streak loss)
+                        </p>
+                    </div>
+                    <div class="shop-item-action">
+                        <div class="shop-item-status">UNAVAILABLE</div>
+                    </div>
+                </div>
+
+                <!-- Timer Boost -->
+                <div class="shop-item" style="opacity: 0.5;">
+                    <div class="shop-item-icon" style="background: linear-gradient(135deg, #ffe0f0 0%, #ffc0e0 100%);">
+                        <span style="font-size: 56px;">⚡</span>
+                    </div>
+                    <div class="shop-item-info">
+                        <h3 class="shop-item-title">Timer Boost</h3>
+                        <p class="shop-item-description">
+                            Get 5 extra seconds for timed challenges (coming soon)
+                        </p>
+                    </div>
+                    <div class="shop-item-action">
+                        <div class="shop-item-status">COMING SOON</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside class="right-sidebar">
+        <!-- User Stats -->
+        <div class="user-stats-bar">
+            <div class="stat-item">
+                <span class="stat-icon">🔥</span>
+                <span class="stat-value">{{ profile.streak_days }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">💎</span>
+                <span class="stat-value">{{ profile.gems }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-icon">❤️</span>
+                <span class="stat-value">{{ profile.hearts }}</span>
+            </div>
+        </div>
+
+        <!-- Unlock Leaderboards Card -->
+        <div class="sidebar-card unlock-card">
+            <div class="unlock-icon">🔒</div>
+            <h3>Unlock Leaderboards!</h3>
+            <p>Complete 9 more lessons to start competing</p>
+        </div>
+
+        <!-- Daily Quests Preview -->
+        {% if daily_quests %}
+        <div class="sidebar-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3>Daily Quests</h3>
+                <a href="{% url 'quests' %}" style="color: var(--duo-blue); font-size: 13px; font-weight: 700; text-decoration: none; text-transform: uppercase;">View All</a>
+            </div>
+            
+            {% for user_quest in daily_quests %}
+            <div class="quest-item" style="margin-bottom: 16px;">
+                <div class="quest-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span style="font-size: 20px;">⚡</span>
+                    <span style="font-weight: 700; font-size: 14px; color: var(--duo-text);">{{ user_quest.quest.title }}</span>
+                </div>
+                <div class="quest-progress-bar" style="width: 100%; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden;">
+                    <div class="quest-progress-fill" style="height: 100%; background: linear-gradient(90deg, #ffd900 0%, #ffb800 100%); width: {% widthratio user_quest.progress user_quest.quest.target_value 100 %}%;"></div>
+                </div>
+                <div style="font-size: 12px; color: var(--duo-text-light); margin-top: 4px;">
+                    {{ user_quest.progress }} / {{ user_quest.quest.target_value }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Gems Info Card -->
+        <div class="sidebar-card" style="background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%); color: white; border: none;">
+            <h3 style="color: white;">Earn More Gems! 💎</h3>
+            <p style="margin-top: 12px; font-size: 14px; opacity: 0.95; line-height: 1.6;">
+                Complete lessons and quests to earn gems. Use them to purchase power-ups and refill your hearts!
+            </p>
+        </div>
+    </aside>
+</div>
+{% endblock %}

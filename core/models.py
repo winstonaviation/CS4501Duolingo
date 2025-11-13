@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.core.validators import MinValueValidator
 
 User = settings.AUTH_USER_MODEL
 
@@ -76,6 +77,7 @@ class Exercise(models.Model):
     MATCH_PAIRS = "MP"
     LISTEN = "LS"
     SPEAK = "SP"
+    LISTEN_CONSTRUCT = "LC"
 
     TYPE_CHOICES = [
         (MULTIPLE_CHOICE, "Multiple Choice"),
@@ -83,6 +85,7 @@ class Exercise(models.Model):
         (MATCH_PAIRS, "Match Pairs"),
         (LISTEN, "Listen"),
         (SPEAK, "Speak"),
+        (LISTEN_CONSTRUCT, 'Listen & Construct')
     ]
 
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name="exercises")
@@ -161,7 +164,7 @@ class UserProfile(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
 
     # Gamification fields
-    hearts = models.IntegerField(default=5)
+    hearts = models.IntegerField(default=5, validators=[MinValueValidator(0)])
     max_hearts = models.IntegerField(default=5)
     gems = models.IntegerField(default=0)
     xp = models.IntegerField(default=0)
@@ -180,9 +183,8 @@ class UserProfile(models.Model):
 
     def restore_hearts(self):
         """Restore hearts to maximum and update restore timestamp"""
-        from datetime import datetime
         self.hearts = self.max_hearts
-        self.last_heart_restore = datetime.now()
+        self.last_heart_restore = timezone.now()
         self.save()
 
     def add_xp(self, amount):

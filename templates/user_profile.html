@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ user.username }} - Profile · Duolingo{% endblock %}
+{% block title %}{{ user.username }} - Profile · Multilingo{% endblock %}
 
 {% block content %}
 <style>
@@ -355,7 +355,7 @@
                 <span class="sidebar-nav-icon">🏠</span>
                 <span>LEARN</span>
             </a>
-            <a href="#" class="sidebar-nav-item">
+            <a href="{% url 'leaderboards' %}" class="sidebar-nav-item">
                 <span class="sidebar-nav-icon">🏆</span>
                 <span>LEADERBOARDS</span>
             </a>
@@ -363,18 +363,22 @@
                 <span class="sidebar-nav-icon">🎯</span>
                 <span>QUESTS</span>
             </a>
-            <a href="#" class="sidebar-nav-item">
+            <!--
+            <a href="{% url 'shop' %}" class="sidebar-nav-item">
                 <span class="sidebar-nav-icon">🛍️</span>
                 <span>SHOP</span>
             </a>
+            -->
             <a href="{% url 'user_profile' %}" class="sidebar-nav-item active">
                 <span class="sidebar-nav-icon">👤</span>
                 <span>PROFILE</span>
             </a>
+            <!--
             <a href="#" class="sidebar-nav-item">
                 <span class="sidebar-nav-icon">⋯</span>
                 <span>MORE</span>
             </a>
+            -->
         </nav>
     </aside>
 
@@ -489,7 +493,7 @@
                 </a>
                 
                 <a href="#" class="friend-action-item">
-                    <div class="friend-action-icon">🦉</div>
+                    <div class="friend-action-icon">🐬</div>
                     <div class="friend-action-text">Invite friends</div>
                     <div class="friend-action-arrow">›</div>
                 </a>
