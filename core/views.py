@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 from django.db.models import Count
-from datetime import date, datetime, time
+from datetime import date, time, timedelta
 from django.http import JsonResponse
 from .models import (
     Course, Section, Unit, Lesson, Exercise, ExerciseChoice,
@@ -16,17 +16,17 @@ def restore_hearts_if_needed(profile):
     Restore hearts to maximum if it's a new day since last heart restoration.
     This should be called whenever a user interacts with the app.
     """
-    from datetime import datetime, time, timedelta
     
-    now = datetime.now()
+    
+    now = timezone.now()
     
     # Check if we have a last_heart_restore field
     if profile.last_active_date:
         # Get midnight of today
-        today_midnight = datetime.combine(date.today(), time.min)
+        today_midnight = timezone.make_aware(timezone.datetime.combine(date.today(), time.min))
         
         # Get midnight of last active date
-        last_active_midnight = datetime.combine(profile.last_active_date, time.min)
+        last_active_midnight = timezone.make_aware(timezone.datetime.combine(profile.last_active_date, time.min))
         
         # If last active was before today's midnight, restore hearts
         if last_active_midnight < today_midnight:
@@ -546,9 +546,8 @@ def quests(request):
         daily_quests = UserDailyQuest.objects.filter(user=request.user, date_assigned=today)
     
     # Calculate time remaining until quests refresh
-    from datetime import datetime, timedelta
-    tomorrow = datetime.combine(today + timedelta(days=1), datetime.min.time())
-    time_remaining = tomorrow - datetime.now()
+    tomorrow = timezone.make_aware(timezone.datetime.combine(today + timedelta(days=1), time.min))
+    time_remaining = tomorrow - timezone.now()
     hours_remaining = int(time_remaining.total_seconds() // 3600)
     minutes_remaining = int((time_remaining.total_seconds() % 3600) // 60)
     
