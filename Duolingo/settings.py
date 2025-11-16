@@ -29,7 +29,7 @@ SECRET_KEY = config('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['127.0.0.1', '.vercel.app']
 
 
 # Application definition
@@ -85,6 +85,19 @@ WSGI_APPLICATION = 'Duolingo.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+'''
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('SUPABASE_DB_NAME'),
+        'USER': config('SUPABASE_DB_USER'),
+        'PASSWORD': config('SUPABASE_DB_PASSWORD'),
+        'HOST': config('SUPABASE_DB_HOST'),
+        'PORT': config('SUPABASE_DB_PORT', default='5432'),
+    }
+}
+'''
 
 DATABASES = {
     'default': {
@@ -158,6 +171,18 @@ ACCOUNT_LOGOUT_ON_GET = True
 # Skip the intermediate social login confirmation page
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
+# For development, print emails to the console instead of sending them.
+# This prevents the ConnectionRefusedError during signup.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+'''
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'multilingo269@gmail.com'
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') # NOT your regular password
+DEFAULT_FROM_EMAIL = 'multilingo269@gmail.com'
+'''
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {

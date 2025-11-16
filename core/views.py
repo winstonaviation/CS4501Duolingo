@@ -10,6 +10,7 @@ from .models import (
     UserDailyQuest, Achievement, UserAchievement
 )
 from .utils.ai_helper import generate_smart_hint, explain_mistake, check_translation_with_ai
+from .utils.achievements import check_and_award_achievements, get_achievement_progress
 
 def restore_hearts_if_needed(profile):
     """
@@ -448,6 +449,37 @@ def lesson_complete(request, lesson_id):
             ).first()
             if perfect_quest:
                 perfect_quest.update_progress(1)
+        
+        week_num = today.isocalendar()[1]
+        year_num = today.year
+        
+        # Weekly Warrior quest (7 perfect lessons in a week)
+        if perfect_count == total_exercises:
+            weekly_warrior = UserDailyQuest.objects.filter(
+                user=request.user,
+                quest__quest_type=DailyQuest.WEEKLY_WARRIOR,
+                week_assigned=week_num,
+                year_assigned=year_num
+            ).first()
+            if weekly_warrior:
+                weekly_warrior.update_progress(1)
+        
+        # Streak Master quest (maintain 7-day streak)
+        if profile.streak_days >= 7:
+            streak_master = UserDailyQuest.objects.filter(
+                user=request.user,
+                quest__quest_type=DailyQuest.STREAK_MASTER,
+                week_assigned=week_num,
+                year_assigned=year_num
+            ).first()
+            if streak_master and not streak_master.completed:
+                streak_master.progress = profile.streak_days
+                streak_master.update_progress(0)  # Just check completion
+
+            check_and_award_achievements(request.user, achievement_type='lesson')
+            check_and_award_achievements(request.user, achievement_type='xp')
+            check_and_award_achievements(request.user, achievement_type='quest')
+            check_and_award_achievements(request.user, achievement_type='time')
     else:
         # Practice mode - just update last_seen
         if lesson_progress:
@@ -490,7 +522,6 @@ def language_selection(request):
 
     languages = [
         {"code": UserProfile.SPANISH, "name": "Spanish", "flag": "🇪🇸", "native_name": "Español"},
-        {"code": UserProfile.FRENCH, "name": "French", "flag": "🇫🇷", "native_name": "Français"},
         {"code": UserProfile.CHINESE, "name": "Chinese", "flag": "🇨🇳", "native_name": "中文"},
     ]
 
@@ -510,52 +541,105 @@ def user_profile(request):
         completed=True
     ).count()
     
-    # Get recent achievements
+    # Get achievement progress
+    achievement_progress = get_achievement_progress(request.user)
+    
+    # Get recent achievements (last 6 earned)
     recent_achievements = UserAchievement.objects.filter(
         user=request.user
     ).select_related('achievement').order_by('-earned_at')[:6]
+    
+    # Get all achievements for display
+    all_achievements = Achievement.objects.all().order_by('-xp_reward')
+    
+    # Create a set of earned achievement IDs for easy lookup
+    earned_achievement_ids = set(
+        UserAchievement.objects.filter(
+            user=request.user
+        ).values_list('achievement_id', flat=True)
+    )
     
     return render(request, 'user_profile.html', {
         'profile': profile,
         'total_lessons_completed': total_lessons_completed,
         'recent_achievements': recent_achievements,
+        'all_achievements': all_achievements,
+        'earned_achievement_ids': earned_achievement_ids,
+        'achievement_progress': achievement_progress,
     })
 
 @login_required
 def quests(request):
     """Display quests page with daily and weekly challenges"""
     profile = request.user.profile
-    
-    # Restore hearts if needed
     restore_hearts_if_needed(profile)
     
     today = date.today()
     
     # Get or create today's daily quests
-    daily_quests = UserDailyQuest.objects.filter(user=request.user, date_assigned=today)
+    daily_quests = UserDailyQuest.objects.filter(
+        user=request.user, 
+        date_assigned=today,
+        quest__is_weekly=False  # NEW: Only daily quests
+    )
     
-    # If no quests exist for today, create them
     if not daily_quests.exists():
-        active_quests = DailyQuest.objects.filter(is_active=True)
-        for quest in active_quests:
+        active_daily_quests = DailyQuest.objects.filter(is_active=True, is_weekly=False)
+        for quest in active_daily_quests:
             UserDailyQuest.objects.create(
                 user=request.user,
                 quest=quest,
                 date_assigned=today
             )
-        daily_quests = UserDailyQuest.objects.filter(user=request.user, date_assigned=today)
+        daily_quests = UserDailyQuest.objects.filter(
+            user=request.user, 
+            date_assigned=today,
+            quest__is_weekly=False
+        )
     
-    # Calculate time remaining until quests refresh
+    # NEW: Get or create weekly quests
+    week_num = today.isocalendar()[1]
+    year_num = today.year
+    
+    weekly_quests = UserDailyQuest.objects.filter(
+        user=request.user,
+        week_assigned=week_num,
+        year_assigned=year_num,
+        quest__is_weekly=True
+    )
+    
+    if not weekly_quests.exists():
+        active_weekly_quests = DailyQuest.objects.filter(is_active=True, is_weekly=True)
+        for quest in active_weekly_quests:
+            UserDailyQuest.objects.create(
+                user=request.user,
+                quest=quest,
+                week_assigned=week_num,
+                year_assigned=year_num
+            )
+        weekly_quests = UserDailyQuest.objects.filter(
+            user=request.user,
+            week_assigned=week_num,
+            year_assigned=year_num,
+            quest__is_weekly=True
+        )
+    
+    # Calculate time remaining
     tomorrow = timezone.make_aware(timezone.datetime.combine(today + timedelta(days=1), time.min))
     time_remaining = tomorrow - timezone.now()
     hours_remaining = int(time_remaining.total_seconds() // 3600)
     minutes_remaining = int((time_remaining.total_seconds() % 3600) // 60)
     
+    # Calculate days until end of week (Monday = start of week)
+    days_until_week_end = 7 - today.weekday()
+    
     return render(request, 'quests.html', {
         'profile': profile,
         'daily_quests': daily_quests,
+        'weekly_quests': weekly_quests,  # NEW
         'hours_remaining': hours_remaining,
         'minutes_remaining': minutes_remaining,
+        'days_until_week_end': days_until_week_end,  # NEW
     })
 
 # Add these new views to your existing core/views.py file

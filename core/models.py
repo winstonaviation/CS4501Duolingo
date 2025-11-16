@@ -226,13 +226,20 @@ class DailyQuest(models.Model):
     COMPLETE_LESSONS = "complete_lessons"
     PERFECT_LESSON = "perfect_lesson"
     USE_NO_HEARTS = "use_no_hearts"
+    WEEKLY_WARRIOR = "weekly_warrior"  # NEW
+    STREAK_MASTER = "streak_master"    # NEW
 
     QUEST_TYPE_CHOICES = [
         (EARN_XP, "Earn XP"),
         (COMPLETE_LESSONS, "Complete Lessons"),
         (PERFECT_LESSON, "Get a Perfect Lesson"),
         (USE_NO_HEARTS, "Complete without losing hearts"),
+        (WEEKLY_WARRIOR, "Weekly Warrior"),      # NEW
+        (STREAK_MASTER, "Streak Master"),        # NEW
     ]
+    
+    # Add new field to distinguish daily vs weekly
+    is_weekly = models.BooleanField(default=False)  # NEW
 
     quest_type = models.CharField(max_length=20, choices=QUEST_TYPE_CHOICES)
     title = models.CharField(max_length=120)
@@ -251,18 +258,36 @@ class UserDailyQuest(models.Model):
     progress = models.IntegerField(default=0)
     completed = models.BooleanField(default=False)
     date_assigned = models.DateField(default=timezone.now)
+     # Change date_assigned to support weekly tracking
+    week_assigned = models.IntegerField(null=True, blank=True, 
+                                       help_text="Week number of the year for weekly quests")
+    year_assigned = models.IntegerField(null=True, blank=True,
+                                       help_text="Year for weekly quests")
 
     class Meta:
-        unique_together = [("user", "quest", "date_assigned")]
-
-    def __str__(self):
-        return f"{self.user} - {self.quest.title}: {self.progress}/{self.quest.target_value}"
-
+        unique_together = [("user", "quest", "date_assigned"), 
+                          ("user", "quest", "week_assigned", "year_assigned")]
+    
+    def award_rewards(self):
+        """Award XP and gems when quest is completed"""
+        if self.completed and self.quest:
+            # Award XP
+            if self.quest.xp_reward > 0:
+                self.user.profile.add_xp(self.quest.xp_reward)
+            
+            # Award Gems
+            if self.quest.gem_reward > 0:
+                self.user.profile.add_gems(self.quest.gem_reward)
+            
+            self.save()
+    
     def update_progress(self, increment=1):
         """Update quest progress and mark as completed if target reached"""
         self.progress += increment
-        if self.progress >= self.quest.target_value:
+        if self.progress >= self.quest.target_value and not self.completed:
             self.completed = True
+            # NEW: Award rewards immediately when quest completes
+            self.award_rewards()
         self.save()
 
 class Achievement(models.Model):

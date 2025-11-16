@@ -190,24 +190,217 @@
         color: var(--duo-text-light);
     }
 
+    /* Achievements Section Styles */
+    .achievements-section {
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 40px;
+        transition: all 0.3s ease;
+    }
+
+    .achievements-section.minimized {
+        max-height: 80px;
+    }
+
     .achievements-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 24px;
+        padding: 24px;
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.2s;
     }
 
-    .view-all-achievements {
-        color: var(--duo-blue);
+    .achievements-header:hover {
+        background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    }
+
+    .achievements-header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .achievements-header-left h2 {
+        font-size: 24px;
+        font-weight: 900;
+        color: var(--duo-text);
+        margin: 0;
+    }
+
+    .achievement-progress {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+        color: var(--duo-text-light);
+        font-weight: 600;
+    }
+
+    .achievement-progress-bar {
+        width: 120px;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .achievement-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ffd900 0%, #ffb800 100%);
+        transition: width 0.3s ease;
+    }
+
+    .toggle-achievements-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        border: 2px solid var(--duo-gray);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .toggle-achievements-btn:hover {
+        background: #f0f9ff;
+        border-color: var(--duo-blue);
+    }
+
+    .achievements-section.minimized .toggle-achievements-btn {
+        transform: rotate(180deg);
+    }
+
+    .achievements-content {
+        padding: 24px;
+        max-height: 600px;
+        overflow-y: auto;
+        transition: max-height 0.3s ease;
+    }
+
+    .achievements-section.minimized .achievements-content {
+        max-height: 0;
+        padding: 0 24px;
+        overflow: hidden;
+    }
+
+    /* Custom scrollbar for achievements */
+    .achievements-content::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .achievements-content::-webkit-scrollbar-track {
+        background: #f0f0f0;
+        border-radius: 4px;
+    }
+
+    .achievements-content::-webkit-scrollbar-thumb {
+        background: var(--duo-blue);
+        border-radius: 4px;
+    }
+
+    .achievements-content::-webkit-scrollbar-thumb:hover {
+        background: #0e8fd3;
+    }
+
+    .achievements-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+
+    .achievement-card {
+        background: white;
+        border: 2px solid var(--duo-gray);
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.2s;
+        position: relative;
+    }
+
+    .achievement-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .achievement-card.locked {
+        opacity: 0.5;
+    }
+
+    .achievement-card.earned {
+        border-color: var(--duo-green);
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    }
+
+    .achievement-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+        display: block;
+    }
+
+    .achievement-card.locked .achievement-icon {
+        filter: grayscale(100%);
+    }
+
+    .achievement-title {
+        font-size: 16px;
+        font-weight: 900;
+        color: var(--duo-text);
+        margin-bottom: 8px;
+    }
+
+    .achievement-description {
+        font-size: 13px;
+        color: var(--duo-text-light);
+        line-height: 1.4;
+        margin-bottom: 12px;
+    }
+
+    .achievement-reward {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
         font-size: 13px;
         font-weight: 700;
-        text-transform: uppercase;
-        text-decoration: none;
-        letter-spacing: 0.5px;
+        color: var(--duo-text);
+        padding-top: 12px;
+        border-top: 1px solid var(--duo-gray);
     }
 
-    .view-all-achievements:hover {
-        text-decoration: underline;
+    .achievement-card.earned .achievement-reward {
+        border-top-color: var(--duo-green);
+    }
+
+    .reward-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .earned-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 32px;
+        height: 32px;
+        background: var(--duo-green);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 18px;
+        font-weight: 900;
+        box-shadow: 0 2px 8px rgba(88, 204, 2, 0.4);
     }
 
     .achievements-placeholder {
@@ -222,6 +415,19 @@
         font-size: 64px;
         margin-bottom: 16px;
         opacity: 0.5;
+    }
+
+    .view-all-achievements {
+        color: var(--duo-blue);
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        text-decoration: none;
+        letter-spacing: 0.5px;
+    }
+
+    .view-all-achievements:hover {
+        text-decoration: underline;
     }
 
     /* Right Sidebar */
@@ -344,6 +550,16 @@
         .stats-grid {
             grid-template-columns: 1fr;
         }
+        
+        .achievements-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 600px) {
+        .achievements-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
@@ -363,22 +579,10 @@
                 <span class="sidebar-nav-icon">🎯</span>
                 <span>QUESTS</span>
             </a>
-            <!--
-            <a href="{% url 'shop' %}" class="sidebar-nav-item">
-                <span class="sidebar-nav-icon">🛍️</span>
-                <span>SHOP</span>
-            </a>
-            -->
             <a href="{% url 'user_profile' %}" class="sidebar-nav-item active">
                 <span class="sidebar-nav-icon">👤</span>
                 <span>PROFILE</span>
             </a>
-            <!--
-            <a href="#" class="sidebar-nav-item">
-                <span class="sidebar-nav-icon">⋯</span>
-                <span>MORE</span>
-            </a>
-            -->
         </nav>
     </aside>
 
@@ -415,10 +619,12 @@
         </div>
 
         <!-- Tabs -->
+        <!--
         <div class="profile-tabs">
             <a href="#" class="profile-tab active">Following</a>
             <a href="#" class="profile-tab">Followers</a>
         </div>
+        -->
 
         <!-- Statistics Section -->
         <div class="profile-section">
@@ -458,16 +664,61 @@
             </div>
         </div>
 
-        <!-- Achievements Section -->
-        <div class="profile-section">
-            <div class="achievements-header">
-                <h2>Achievements</h2>
-                <a href="#" class="view-all-achievements">View All</a>
+        <!-- Achievements Section (Scrollable & Minimizable) -->
+        <div class="achievements-section" id="achievementsSection">
+            <div class="achievements-header" onclick="toggleAchievements()">
+                <div class="achievements-header-left">
+                    <h2>🏆 Achievements</h2>
+                    {% if achievement_progress %}
+                    <div class="achievement-progress">
+                        <span>{{ achievement_progress.earned_achievements }} / {{ achievement_progress.total_achievements }}</span>
+                        <div class="achievement-progress-bar">
+                            <div class="achievement-progress-fill" style="width: {{ achievement_progress.percentage }}%;"></div>
+                        </div>
+                        <span>{{ achievement_progress.percentage }}%</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <button class="toggle-achievements-btn" type="button" aria-label="Toggle achievements">
+                    ▼
+                </button>
             </div>
             
-            <div class="achievements-placeholder">
-                <div class="achievements-placeholder-icon">🏆</div>
-                <p>Complete lessons to earn your first achievement!</p>
+            <div class="achievements-content">
+                {% if all_achievements %}
+                    <div class="achievements-grid">
+                        {% for achievement in all_achievements %}
+                            <div class="achievement-card {% if achievement.id in earned_achievement_ids %}earned{% else %}locked{% endif %}">
+                                {% if achievement.id in earned_achievement_ids %}
+                                    <div class="earned-badge">✓</div>
+                                {% endif %}
+                                <span class="achievement-icon">{{ achievement.icon }}</span>
+                                <h3 class="achievement-title">{{ achievement.title }}</h3>
+                                <p class="achievement-description">{{ achievement.description }}</p>
+                                <div class="achievement-reward">
+                                    {% if achievement.xp_reward > 0 %}
+                                        <div class="reward-item">
+                                            <span>⭐</span>
+                                            <span>{{ achievement.xp_reward }}</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if achievement.gem_reward > 0 %}
+                                        <div class="reward-item">
+                                            <span>💎</span>
+                                            <span>{{ achievement.gem_reward }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="achievements-placeholder">
+                        <div class="achievements-placeholder-icon">🏆</div>
+                        <h3>No achievements yet</h3>
+                        <p>Complete lessons to start earning achievements!</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </main>
@@ -491,14 +742,37 @@
                     <div class="friend-action-text">Find friends</div>
                     <div class="friend-action-arrow">›</div>
                 </a>
-                
+                <!--
                 <a href="#" class="friend-action-item">
                     <div class="friend-action-icon">🐬</div>
                     <div class="friend-action-text">Invite friends</div>
                     <div class="friend-action-arrow">›</div>
                 </a>
+                -->
             </div>
         </div>
+
+        <!-- Recent Achievements Sidebar -->
+        {% if recent_achievements %}
+        <div class="sidebar-card">
+            <h3>Recent Achievements 🏆</h3>
+            <div style="margin-top: 16px;">
+                {% for user_achievement in recent_achievements %}
+                    <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #f0fdf4; border-radius: 8px; margin-bottom: 8px;">
+                        <span style="font-size: 32px;">{{ user_achievement.achievement.icon }}</span>
+                        <div style="flex: 1;">
+                            <div style="font-size: 14px; font-weight: 700; color: var(--duo-text); margin-bottom: 2px;">
+                                {{ user_achievement.achievement.title }}
+                            </div>
+                            <div style="font-size: 12px; color: var(--duo-text-light);">
+                                {{ user_achievement.earned_at|timesince }} ago
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Footer Links -->
         <div class="profile-footer">
@@ -515,4 +789,23 @@
         </div>
     </aside>
 </div>
+
+<script>
+function toggleAchievements() {
+    const section = document.getElementById('achievementsSection');
+    section.classList.toggle('minimized');
+    
+    // Save state to localStorage
+    const isMinimized = section.classList.contains('minimized');
+    localStorage.setItem('achievementsMinimized', isMinimized);
+}
+
+// Restore minimized state on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const isMinimized = localStorage.getItem('achievementsMinimized') === 'true';
+    if (isMinimized) {
+        document.getElementById('achievementsSection').classList.add('minimized');
+    }
+});
+</script>
 {% endblock %}

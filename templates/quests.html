@@ -415,66 +415,76 @@
             {% endif %}
         </div>
 
-        <!-- Coming Soon Section -->
         <div class="quests-section">
-            <div class="quests-section-header">
-                <h2>Weekly Challenges</h2>
-                <div class="quest-locked-badge">
-                    <span>🔒</span>
-                    <span>COMING SOON</span>
-                </div>
-            </div>
-
-            <div class="quest-card quest-locked">
-                <div class="quest-card-header">
-                    <div class="quest-icon">🏆</div>
-                    <div class="quest-info">
-                        <h3 class="quest-title">Weekly Warrior</h3>
-                        <p class="quest-description">Complete 7 perfect lessons this week</p>
-                    </div>
-                </div>
-                <div class="quest-progress">
-                    <div class="quest-progress-bar">
-                        <div class="quest-progress-fill" style="width: 0%;"></div>
-                    </div>
-                </div>
-                <div class="quest-reward">
-                    <div class="reward-item">
-                        <span class="reward-icon">⭐</span>
-                        <span>100 XP</span>
-                    </div>
-                    <div class="reward-item">
-                        <span class="reward-icon">💎</span>
-                        <span>50 Gems</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="quest-card quest-locked">
-                <div class="quest-card-header">
-                    <div class="quest-icon">🔥</div>
-                    <div class="quest-info">
-                        <h3 class="quest-title">Streak Master</h3>
-                        <p class="quest-description">Maintain a 7-day streak</p>
-                    </div>
-                </div>
-                <div class="quest-progress">
-                    <div class="quest-progress-bar">
-                        <div class="quest-progress-fill" style="width: {% widthratio profile.streak_days 7 100 %}%;"></div>
-                    </div>
-                </div>
-                <div class="quest-reward">
-                    <div class="reward-item">
-                        <span class="reward-icon">⭐</span>
-                        <span>150 XP</span>
-                    </div>
-                    <div class="reward-item">
-                        <span class="reward-icon">💎</span>
-                        <span>75 Gems</span>
-                    </div>
-                </div>
-            </div>
+    <div class="quests-section-header">
+        <h2>Weekly Challenges</h2>
+        <div class="refresh-timer">
+            <span class="refresh-timer-icon">📅</span>
+            <span>Resets in {{ days_until_week_end }} day{{ days_until_week_end|pluralize }}</span>
         </div>
+    </div>
+
+    {% if weekly_quests %}
+        {% for user_quest in weekly_quests %}
+            <div class="quest-card {% if user_quest.completed %}completed{% endif %}">
+                <div class="quest-card-header">
+                    <div class="quest-icon">
+                        {% if user_quest.quest.quest_type == 'weekly_warrior' %}🏆
+                        {% elif user_quest.quest.quest_type == 'streak_master' %}🔥
+                        {% else %}🎯
+                        {% endif %}
+                    </div>
+                    <div class="quest-info">
+                        <h3 class="quest-title">{{ user_quest.quest.title }}</h3>
+                        <p class="quest-description">{{ user_quest.quest.description }}</p>
+                        {% if user_quest.completed %}
+                            <div class="quest-status">
+                                <span>✓</span>
+                                <span>Completed!</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% if user_quest.completed %}
+                        <div class="completed-badge">
+                            <span>✓</span>
+                            <span>COMPLETE</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="quest-progress">
+                    <div class="quest-progress-header">
+                        <span class="quest-progress-text">
+                            {{ user_quest.progress }} / {{ user_quest.quest.target_value }}
+                        </span>
+                        <span class="quest-progress-percentage">
+                            {% widthratio user_quest.progress user_quest.quest.target_value 100 %}%
+                        </span>
+                    </div>
+                    <div class="quest-progress-bar">
+                        <div class="quest-progress-fill" 
+                             style="width: {% if user_quest.progress >= user_quest.quest.target_value %}100{% else %}{% widthratio user_quest.progress user_quest.quest.target_value 100 %}{% endif %}%;"></div>
+                    </div>
+                </div>
+
+                <div class="quest-reward">
+                    {% if user_quest.quest.xp_reward > 0 %}
+                        <div class="reward-item">
+                            <span class="reward-icon">⭐</span>
+                            <span>{{ user_quest.quest.xp_reward }} XP</span>
+                        </div>
+                    {% endif %}
+                    {% if user_quest.quest.gem_reward > 0 %}
+                        <div class="reward-item">
+                            <span class="reward-icon">💎</span>
+                            <span>{{ user_quest.quest.gem_reward }} Gems</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
     </main>
 
     <!-- Right Sidebar -->
